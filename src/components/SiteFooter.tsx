@@ -32,7 +32,9 @@ export function SiteFooter() {
             <li>
               <a href={`mailto:${site.nitContact}`}>{site.nitContact}</a>
             </li>
-            <li>Toll-free: {site.tollFree}</li>
+            <li>
+              Helpline: <a href={`tel:+91${site.phone}`}>{site.phone}</a>
+            </li>
             <li>NIT Jamshedpur, Jharkhand – 831014</li>
           </ul>
         </div>

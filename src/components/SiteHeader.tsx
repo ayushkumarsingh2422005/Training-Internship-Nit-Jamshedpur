@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { FontSizeControls } from "./FontSizeControls";
 import { SiteNav } from "./SiteNav";
 import { site } from "@/lib/content";
 
@@ -9,22 +10,11 @@ export function SiteHeader() {
       <div className="utility-bar">
         <div className="container utility-inner">
           <div className="utility-campaigns" aria-hidden="true">
-            <span className="campaign-badge campaign-gandhi">Gandhi 150</span>
-            <span className="campaign-badge campaign-digital">Digital India</span>
-            <span className="campaign-badge campaign-swachh">Swachh Bharat</span>
+            Backed By <b>NIT Jamshedpur</b>
+            <Image src="/nitjsrlogo.png" alt="NIT Jamshedpur" width={20} height={20} />
           </div>
           <div className="utility-access">
-            <div className="font-size-group" role="group" aria-label="Font size">
-              <button type="button" className="font-btn" aria-label="Decrease font size">
-                A-
-              </button>
-              <button type="button" className="font-btn" aria-label="Default font size">
-                A
-              </button>
-              <button type="button" className="font-btn" aria-label="Increase font size">
-                A+
-              </button>
-            </div>
+            <FontSizeControls />
             <span className="utility-skip">
               <span className="utility-divider" aria-hidden="true" />
               <a href="#main-content">Skip to main content</a>
@@ -53,9 +43,9 @@ export function SiteHeader() {
                   </svg>
                 </span>
                 <div className="toll-copy">
-                  <span className="toll-label">Toll-Free No</span>
-                  <a href={`tel:${site.tollFree.replace(/-/g, "")}`} className="toll-number">
-                    {site.tollFree}
+                  <span className="toll-label">Helpline</span>
+                  <a href={`tel:+91${site.phone}`} className="toll-number">
+                    {site.phone}
                   </a>
                 </div>
               </div>

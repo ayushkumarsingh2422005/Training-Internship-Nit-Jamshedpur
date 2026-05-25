@@ -278,12 +278,12 @@ export const chatNodes: Record<string, ChatNode> = {
     messages: [
       "Contact information:",
       `NIT Jamshedpur — ${site.nitContact}\nNIT Jamshedpur, Jharkhand – 831014`,
-      `DHTE Jharkhand — Toll-free: ${site.tollFree}\n${site.dhteContact}`,
+      `DHTE Jharkhand — Helpline: ${site.phone}\n${site.dhteContact}`,
       "For batch instructions, also contact your parent polytechnic Principal.",
     ],
     buttons: withMenu(
       [
-        { id: "call", label: `Call ${site.tollFree}`, href: `tel:${site.tollFree.replace(/-/g, "")}` },
+        { id: "call", label: `Call ${site.phone}`, href: `tel:+91${site.phone}` },
         { id: "contact-page", label: "Contact page", href: "/contact" },
       ],
       "menu",

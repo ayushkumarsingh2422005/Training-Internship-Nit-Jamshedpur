@@ -42,9 +42,9 @@ export default function ContactPage() {
                 <dd>Government of Jharkhand</dd>
               </div>
               <div>
-                <dt>Toll-free</dt>
+                <dt>Helpline</dt>
                 <dd>
-                  <a href={`tel:${site.tollFree.replace(/-/g, "")}`}>{site.tollFree}</a>
+                  <a href={`tel:+91${site.phone}`}>{site.phone}</a>
                 </dd>
               </div>
               <div>

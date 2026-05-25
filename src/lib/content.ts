@@ -2,7 +2,7 @@ export const site = {
   title: "Industrial Training & Internship Portal",
   subtitle: "NIT Jamshedpur × Department of Higher and Technical Education, Jharkhand",
   shortName: "NIT JSR – DHTE Internship Portal",
-  tollFree: "1800-569-3311",
+  phone: "8299797516",
   nitContact: "training@nitjsr.ac.in",
   dhteContact: "dhte.jharkhand@gov.in",
 } as const;

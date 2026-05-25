@@ -21,6 +21,19 @@
 
 html {
   scroll-behavior: smooth;
+  font-size: 100%;
+}
+
+html[data-font-size-level="0"] {
+  font-size: 87.5%;
+}
+
+html[data-font-size-level="2"] {
+  font-size: 112.5%;
+}
+
+html[data-font-size-level="3"] {
+  font-size: 125%;
 }
 
 body {
@@ -279,8 +292,19 @@ img {
   line-height: 1.4;
 }
 
-.font-btn:hover {
+.font-btn:hover:not(:disabled) {
   background: #f0f0f0;
+}
+
+.font-btn.active {
+  background: #1a3f7a;
+  color: #fff;
+  border-color: #1a3f7a;
+}
+
+.font-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* Overlapping emblem + brand + nav */
