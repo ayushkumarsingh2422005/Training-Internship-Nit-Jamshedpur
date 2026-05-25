@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { programOverview } from "@/lib/content";
+import Image from "next/image";
 
 export function HeroBanner() {
   return (
@@ -27,14 +28,15 @@ export function HeroBanner() {
           </div>
         </div>
         <div className="hero-card" aria-hidden="true">
-          <div className="hero-card-top">Training Pass</div>
-          <div className="hero-card-body">
-            <p className="hero-card-org">NIT Jamshedpur</p>
-            <p className="hero-card-scheme">DHTE Skill Programme</p>
-            <div className="hero-card-chip" />
-            <p className="hero-card-name">Diploma Trainee</p>
-            <p className="hero-card-meta">6-Week Residential Batch</p>
-          </div>
+          <Image
+            src="/Jharkhand_Rajakiya_Chihna.svg"
+            alt=""
+            width={480}
+            height={480}
+            sizes="(min-width: 900px) 42vw, 88vw"
+            priority
+            className="hero-card-image"
+          />
         </div>
       </div>
     </section>

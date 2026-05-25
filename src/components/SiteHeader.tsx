@@ -73,7 +73,7 @@ export function SiteHeader() {
           <Link href="/" className="brand-emblem-overlap" aria-label="Home — Government of Jharkhand">
             <span className="emblem-ring">
               <Image
-                src="/Jharkhand_Rajakiya_Chihna.svg"
+                src="/nitjsrlogo.png"
                 alt=""
                 width={126}
                 height={126}
