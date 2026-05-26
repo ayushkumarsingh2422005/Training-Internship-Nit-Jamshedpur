@@ -22,8 +22,8 @@ export function HeroBanner() {
             <Link href="/notices" className="btn btn-yellow">
               View Notices
             </Link>
-            <Link href="/results" className="btn btn-outline">
-              Check Results
+            <Link href="/results#check-shortlist" className="btn btn-outline">
+              View my result
             </Link>
           </div>
         </div>

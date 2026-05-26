@@ -195,7 +195,7 @@ export const chatNodes: Record<string, ChatNode> = {
       [
         { id: "ass-results", label: "Results status", nextNodeId: "results" },
         { id: "ass-notice", label: "Assessment notice", nextNodeId: "notice_n4" },
-        { id: "ass-page", label: "Open results page", href: "/results" },
+        { id: "ass-page", label: "View my result", href: "/results#check-shortlist" },
       ],
       "menu",
     ),
@@ -268,7 +268,7 @@ export const chatNodes: Record<string, ChatNode> = {
         : results.map((r) => `${r.title}\n${formatDate(r.date)} · ${r.batch}\n${r.description}`).join("\n\n"),
     ],
     buttons: withMenu(
-      [{ id: "results-page", label: "Open results page", href: "/results" }],
+      [{ id: "results-page", label: "View my result", href: "/results#check-shortlist" }],
       "menu",
     ),
   },

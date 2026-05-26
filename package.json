@@ -6,9 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:seed": "tsx scripts/seed-mongodb.ts",
+    "db:seed:reset": "tsx scripts/seed-mongodb.ts --reset"
   },
   "dependencies": {
+    "mongoose": "^9.6.2",
     "next": "^16.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
@@ -17,8 +20,10 @@
     "@types/node": "^24.0.10",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "dotenv": "^17.4.2",
     "eslint": "^9.31.0",
     "eslint-config-next": "^16.0.0",
+    "tsx": "^4.22.3",
     "typescript": "^5.8.3"
   }
 }

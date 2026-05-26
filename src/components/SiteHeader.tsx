@@ -31,8 +31,8 @@ export function SiteHeader() {
             <div className="brand-emblem-spacer" aria-hidden="true" />
 
             <div className="brand-text">
-              <p className="brand-dept">Department of Higher and Technical Education</p>
-              <p className="brand-govt">Government of Jharkhand</p>
+              <p className="brand-dept">NIT Jamshedpur Internship</p>
+              <p className="brand-govt">Backed by Gov of Jharkhand</p>
             </div>
 
             <div className="brand-actions brand-actions-desktop">
@@ -52,8 +52,8 @@ export function SiteHeader() {
               <Link href="/notices" className="btn-pill btn-pill-blue">
                 Notices
               </Link>
-              <Link href="/results" className="btn-pill btn-pill-green">
-                Results
+              <Link href="/results#check-shortlist" className="btn-pill btn-pill-green">
+                View my result
               </Link>
             </div>
           </div>

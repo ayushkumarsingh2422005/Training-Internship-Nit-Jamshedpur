@@ -99,14 +99,14 @@ export default function HomePage() {
           <div>
             <div className="section-head">
               <h2>Results</h2>
-              <Link href="/results" className="text-link">
-                View all
+              <Link href="/results#check-shortlist" className="text-link">
+                View my result
               </Link>
             </div>
             <ul className="notice-list compact">
               {results.map((result) => (
                 <li key={result.id}>
-                  <Link href="/results">
+                  <Link href="/results#check-shortlist">
                     <span className="notice-date">{formatDate(result.date)}</span>
                     <span className="notice-title">{result.title}</span>
                   </Link>
