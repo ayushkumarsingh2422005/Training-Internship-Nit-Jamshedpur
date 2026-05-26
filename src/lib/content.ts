@@ -140,11 +140,20 @@ export type Result = {
 
 export const notices: Notice[] = [
   {
+    id: "n7",
+    title: "Mandatory: hostel preference and gender — all shortlisted students",
+    date: "2026-05-26",
+    category: "Admission",
+    isNew: true,
+    excerpt:
+      "Every shortlisted student must confirm on the Results page whether hostel accommodation is required. If yes, gender (Male, Female, or Other) must also be selected.",
+    body: "All students on the shortlist are required to update their hostel accommodation preference on this portal without delay. On the Results page, sign in with your registered email and mobile number, then choose whether you need hostel accommodation at NIT Jamshedpur or not. If you select Yes, you must also choose your gender (Male, Female, or Other) so that hostel allotment can be planned correctly. If you select No, no gender entry is needed. You may change your choice until the reporting deadline using the same Results login. Students who do not complete this step may face delays in hostel allocation and on-campus reporting.",
+  },
+  {
     id: "n5",
     title: "Shortlist result announcement — 26 May 2026",
     date: "2026-05-26",
     category: "Assessment",
-    isNew: true,
     excerpt:
       "Shortlisted candidates for industrial training at NIT Jamshedpur may check their status on the Results page from 26 May 2026 using registered email and mobile number.",
     body: "The shortlist for the upcoming residential training batch is announced on 26 May 2026. Eligible diploma students should visit the Results section of this portal, enter the same email and mobile number submitted in their application, and confirm hostel accommodation preference where applicable. Students not on the shortlist will be informed on the portal after verification.",
@@ -154,7 +163,6 @@ export const notices: Notice[] = [
     title: "Training commencement from 1 June 2026 (42 days)",
     date: "2026-05-26",
     category: "Schedule",
-    isNew: true,
     excerpt:
       "Residential industrial training at NIT Jamshedpur will commence on 1 June 2026 and continue for 42 days as per the approved batch schedule.",
     body: "All shortlisted students are informed that the training programme will commence on 1 June 2026. The batch will run for 42 days on campus, including classroom sessions, laboratory work, and residential stay where hostel accommodation has been opted. Reporting instructions, document checklist, and chargeable fee details will be communicated through parent polytechnics and this portal. Students must maintain biometric attendance throughout the programme.",
