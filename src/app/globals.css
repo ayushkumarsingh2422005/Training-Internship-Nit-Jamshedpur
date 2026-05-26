@@ -452,6 +452,11 @@ img {
   text-decoration: underline;
 }
 
+.toll-email {
+  font-size: 0.92rem;
+  word-break: break-all;
+}
+
 .btn-pill {
   display: inline-flex;
   align-items: center;

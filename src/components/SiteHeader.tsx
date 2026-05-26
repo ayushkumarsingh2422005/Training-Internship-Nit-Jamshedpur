@@ -39,13 +39,13 @@ export function SiteHeader() {
               <div className="toll-widget">
                 <span className="toll-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-                    <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24 11.36 11.36 0 003.55.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.36 11.36 0 00.57 3.55 1 1 0 01-.24 1.01l-2.2 2.22z" />
+                    <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
                   </svg>
                 </span>
                 <div className="toll-copy">
-                  <span className="toll-label">Helpline</span>
-                  <a href={`tel:+91${site.phone}`} className="toll-number">
-                    {site.phone}
+                  <span className="toll-label">Contact</span>
+                  <a href={`mailto:${site.nitContact}`} className="toll-number toll-email">
+                    {site.nitContact}
                   </a>
                 </div>
               </div>
