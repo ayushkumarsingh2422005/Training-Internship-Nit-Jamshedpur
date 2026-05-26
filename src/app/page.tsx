@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { HeroBanner } from "@/components/HeroBanner";
 import { NewsTicker } from "@/components/NewsTicker";
@@ -21,14 +22,15 @@ export default function HomePage() {
 
       <section className="section-light">
         <div className="container home-about">
-          <div className="info-visual" aria-hidden="true">
-            <div className="info-card-stack">
-              <div className="info-card front">
-                <p className="info-card-title">Training Completion</p>
-                <p className="info-card-sub">NIT Jamshedpur</p>
-              </div>
-              <div className="info-card back" />
-            </div>
+          <div className="info-visual">
+            <Image
+              src="/tech.png"
+              alt="Students in industrial training and skill development at NIT Jamshedpur"
+              width={1200}
+              height={900}
+              className="home-about-image"
+              sizes="(min-width: 800px) 50vw, 100vw"
+            />
           </div>
           <article className="info-panel">
             <h2>About the Programme</h2>
