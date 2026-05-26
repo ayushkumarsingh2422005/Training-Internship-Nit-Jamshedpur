@@ -1,11 +1,30 @@
 import type { Application } from "@/types/application";
 
-type DbApplication = Application & {
+/** Mongoose lean document or plain object from DB */
+export type DbApplicationInput = {
+  fullName: string;
+  fatherName: string;
+  schoolName: string;
+  collegeName: string;
+  address: string;
+  phoneNumber: string;
+  email: string;
+  subject: string;
+  subpart: string;
   wantsAccommodation?: boolean | null;
-  accommodationEnrolledAt?: Date | string | null;
+  accommodationEnrolledAt?: unknown;
 };
 
-export function toApplicationResponse(doc: DbApplication) {
+export function toApplicationResponse(doc: DbApplicationInput): Application {
+  const enrolledAt = doc.accommodationEnrolledAt;
+  let accommodationEnrolledAt: string | null = null;
+  if (enrolledAt != null && enrolledAt !== "") {
+    const date = enrolledAt instanceof Date ? enrolledAt : new Date(String(enrolledAt));
+    if (!Number.isNaN(date.getTime())) {
+      accommodationEnrolledAt = date.toISOString();
+    }
+  }
+
   return {
     fullName: doc.fullName,
     fatherName: doc.fatherName,
@@ -20,8 +39,6 @@ export function toApplicationResponse(doc: DbApplication) {
       doc.wantsAccommodation === true || doc.wantsAccommodation === false
         ? doc.wantsAccommodation
         : null,
-    accommodationEnrolledAt: doc.accommodationEnrolledAt
-      ? new Date(doc.accommodationEnrolledAt).toISOString()
-      : null,
+    accommodationEnrolledAt,
   };
 }
