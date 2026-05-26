@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans } from "next/font/google";
 import Script from "next/script";
-import { PageShell } from "@/components/PageShell";
+import { ConditionalPageShell } from "@/components/ConditionalPageShell";
 import { site } from "@/lib/content";
 import "./globals.css";
 
@@ -31,7 +31,7 @@ export default function RootLayout({
         <Script id="font-size-init" strategy="beforeInteractive">
           {`(function(){try{var v=localStorage.getItem("font-size-level");if(v==="0"||v==="1"||v==="2"||v==="3")document.documentElement.setAttribute("data-font-size-level",v)}catch(e){}})();`}
         </Script>
-        <PageShell>{children}</PageShell>
+        <ConditionalPageShell>{children}</ConditionalPageShell>
       </body>
     </html>
   );

@@ -42,12 +42,6 @@ export default function ContactPage() {
                 <dd>Government of Jharkhand</dd>
               </div>
               <div>
-                <dt>Helpline</dt>
-                <dd>
-                  <a href={`tel:+91${site.phone}`}>{site.phone}</a>
-                </dd>
-              </div>
-              <div>
                 <dt>Email</dt>
                 <dd>
                   <a href={`mailto:${site.dhteContact}`}>{site.dhteContact}</a>

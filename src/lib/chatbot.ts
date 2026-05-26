@@ -121,7 +121,7 @@ export const chatNodes: Record<string, ChatNode> = {
     id: "about",
     messages: [
       programOverview.summary,
-      `Host: ${programOverview.host}\nPartner: ${programOverview.partner}\nDuration: ${programOverview.duration}\nCapacity: ${programOverview.capacity}`,
+      `Host: ${programOverview.host}\nPartner: ${programOverview.partner}\nDuration: ${programOverview.duration}`,
       programOverview.aboutNit,
       programOverview.approval,
     ],
@@ -151,7 +151,7 @@ export const chatNodes: Record<string, ChatNode> = {
   duration_capacity: {
     id: "duration_capacity",
     messages: [
-      `Duration: ${programOverview.duration} (residential)\nAnnual intake: ${programOverview.capacity}`,
+      `Duration: ${programOverview.duration} (residential training at NIT Jamshedpur)`,
       "On-campus hostel and mess facilities are provided for enrolled students.",
     ],
     buttons: withMenu([], "menu"),
@@ -293,12 +293,12 @@ export const chatNodes: Record<string, ChatNode> = {
     messages: [
       "Contact information:",
       `NIT Jamshedpur — ${site.nitContact}\nNIT Jamshedpur, Jharkhand – 831014`,
-      `DHTE Jharkhand — Helpline: ${site.phone}\n${site.dhteContact}`,
+      `DHTE Jharkhand — ${site.dhteContact}`,
       "For batch instructions, also contact your parent polytechnic Principal.",
     ],
     buttons: withMenu(
       [
-        { id: "call", label: `Call ${site.phone}`, href: `tel:+91${site.phone}` },
+        { id: "email-nit", label: "Email NIT", href: `mailto:${site.nitContact}` },
         { id: "contact-page", label: "Contact page", href: "/contact" },
       ],
       "menu",

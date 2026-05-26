@@ -14,7 +14,7 @@ export function HeroBanner() {
             schedules, and results published here.
           </p>
           <ul className="hero-points">
-            <li>{programOverview.capacity} · {programOverview.duration} residential training</li>
+            <li>{programOverview.duration} residential training at NIT Jamshedpur</li>
             <li>On-campus hostel, mess, and modern laboratories</li>
             <li>Official certification by NIT Jamshedpur upon successful completion</li>
           </ul>

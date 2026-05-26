@@ -37,10 +37,6 @@ export default function AboutPage() {
                 <dd>{programOverview.audience}</dd>
               </div>
               <div>
-                <dt>Annual capacity</dt>
-                <dd>{programOverview.capacity}</dd>
-              </div>
-              <div>
                 <dt>Duration</dt>
                 <dd>{programOverview.duration}</dd>
               </div>
