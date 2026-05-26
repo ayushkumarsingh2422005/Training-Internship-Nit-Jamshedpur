@@ -43,12 +43,12 @@ export const attendancePolicy = {
 } as const;
 
 export const feeStructure = {
-  trainingFee: 5292,
-  hostelMessApprox: 3500,
-  totalPerStudent: 8792,
+  trainingFee: "Chargeable (training fee as per programme norms)",
+  hostelMess: "Chargeable (hostel & mess — based on actual rates at NIT Jamshedpur)",
+  total: "Chargeable (consolidated amount communicated at admission)",
   discountNote:
-    "NIT Jamshedpur provides training at approximately 40% below the standard skill-development rate (₹49 per hour as per government norms).",
-  hostelNote: "Hostel and mess charges are based on actual daily rates at NIT Jamshedpur hostels.",
+    "NIT Jamshedpur provides training at subsidized rates under the state MOU, below standard skill-development norms.",
+  hostelNote: "Hostel and mess are chargeable based on actual daily rates at NIT Jamshedpur hostels.",
 } as const;
 
 export const performanceTargets = [
@@ -166,8 +166,8 @@ export const notices: Notice[] = [
     date: "2026-03-06",
     category: "Admission",
     excerpt:
-      "Training fee ₹5,292 plus hostel/mess (approx. ₹3,500) per student. NIT provides subsidized rates under the state MOU.",
-    body: "The consolidated fee of ₹8,792 per student covers skill training at discounted rates and residential facilities on campus. Hostel and mess charges may vary slightly based on actual daily rates.",
+      "Training, hostel, and mess are chargeable per student. NIT provides subsidized rates under the state MOU; exact amounts are communicated at admission.",
+    body: "All programme fees are chargeable. The consolidated amount covers skill training at discounted rates and residential facilities on campus where applicable. Hostel and mess charges follow actual daily rates at NIT Jamshedpur.",
   },
   {
     id: "n4",
@@ -207,12 +207,4 @@ export function formatDate(iso: string) {
     month: "long",
     year: "numeric",
   });
-}
-
-export function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(amount);
 }

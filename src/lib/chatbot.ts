@@ -2,7 +2,6 @@ import {
   attendancePolicy,
   certification,
   feeStructure,
-  formatCurrency,
   formatDate,
   notices,
   programOverview,
@@ -170,7 +169,7 @@ export const chatNodes: Record<string, ChatNode> = {
   fees: {
     id: "fees",
     messages: [
-      `Fee structure (per student):\n• Training: ${formatCurrency(feeStructure.trainingFee)}\n• Hostel & mess (approx.): ${formatCurrency(feeStructure.hostelMessApprox)}\n• Total: ${formatCurrency(feeStructure.totalPerStudent)}`,
+      `Fee structure (per student):\n• Training: ${feeStructure.trainingFee}\n• Hostel & mess: ${feeStructure.hostelMess}\n• Total: ${feeStructure.total}`,
       feeStructure.discountNote,
       feeStructure.hostelNote,
     ],

@@ -69,8 +69,8 @@ export function AccommodationEnrollment({ application, onUpdated }: Props) {
     <div className="accommodation-block">
       <h4 className="accommodation-title">Hostel accommodation</h4>
       <p className="accommodation-lead">
-        Residential training includes optional NIT Jamshedpur hostel &amp; mess (approx. ₹3,500). Please confirm
-        your preference.
+        Residential training includes optional NIT Jamshedpur hostel &amp; mess (chargeable as per actual rates). Please
+        confirm your preference.
       </p>
 
       {enrolled && !editing ? (

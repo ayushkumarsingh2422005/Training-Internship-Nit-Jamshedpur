@@ -3,7 +3,6 @@ import {
   attendancePolicy,
   certification,
   feeStructure,
-  formatCurrency,
   programOverview,
   trainingMethodology,
 } from "@/lib/content";
@@ -77,16 +76,16 @@ export default function AboutPage() {
             <dl className="detail-list">
               <div>
                 <dt>Training fee</dt>
-                <dd>{formatCurrency(feeStructure.trainingFee)}</dd>
+                <dd>{feeStructure.trainingFee}</dd>
               </div>
               <div>
-                <dt>Hostel &amp; mess (approx.)</dt>
-                <dd>{formatCurrency(feeStructure.hostelMessApprox)}</dd>
+                <dt>Hostel &amp; mess</dt>
+                <dd>{feeStructure.hostelMess}</dd>
               </div>
               <div>
-                <dt>Total</dt>
+                <dt>Total (programme)</dt>
                 <dd>
-                  <strong>{formatCurrency(feeStructure.totalPerStudent)}</strong>
+                  <strong>{feeStructure.total}</strong>
                 </dd>
               </div>
             </dl>

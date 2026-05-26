@@ -1936,8 +1936,26 @@ img {
   opacity: 0.85;
 }
 
+.footer-bottom-inner {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px 20px;
+}
+
 .footer-bottom p {
   margin: 0;
+}
+
+.footer-credit a {
+  color: #c8e6c9;
+  font-weight: 600;
+}
+
+.footer-credit a:hover {
+  color: #fff;
+  text-decoration: underline;
 }
 
 /* Chatbot */

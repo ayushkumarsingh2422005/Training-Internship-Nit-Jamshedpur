@@ -40,8 +40,14 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="footer-bottom">
-        <div className="container">
+        <div className="container footer-bottom-inner">
           <p>© 2026 DHTE Jharkhand &amp; NIT Jamshedpur. {programOverview.approval}</p>
+          <p className="footer-credit">
+            Developed by{" "}
+            <a href="https://digicraft.one" target="_blank" rel="noopener noreferrer">
+              DigiCraft Innovation Pvt. Ltd.
+            </a>
+          </p>
         </div>
       </div>
     </footer>

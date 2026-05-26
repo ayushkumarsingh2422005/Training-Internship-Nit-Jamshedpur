@@ -10,8 +10,8 @@ export function SiteHeader() {
       <div className="utility-bar">
         <div className="container utility-inner">
           <div className="utility-campaigns" aria-hidden="true">
-            Backed By <b>NIT Jamshedpur</b>
-            <Image src="/nitjsrlogo.png" alt="NIT Jamshedpur" width={20} height={20} />
+            Developed By <b> <a href="https://digicraft.one" target="_blank">DigiCraft</a></b>
+            <img src="https://data.digicraft.one/Logo/Main.png" alt="NIT Jamshedpur" width={20} height={20} />
           </div>
           <div className="utility-access">
             <FontSizeControls />

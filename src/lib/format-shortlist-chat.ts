@@ -31,7 +31,7 @@ export function formatShortlistFailure(): string {
 
 export function formatAccommodationPrompt(): string {
   return [
-    "NIT Jamshedpur offers optional hostel & mess for residential training (approx. ₹3,500).",
+    "NIT Jamshedpur offers optional hostel & mess for residential training (chargeable as per actual rates).",
     "",
     "Do you require hostel accommodation?",
   ].join("\n");

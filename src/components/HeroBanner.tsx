@@ -35,6 +35,8 @@ export function HeroBanner() {
             height={480}
             sizes="(min-width: 900px) 42vw, 88vw"
             priority
+            loading="eager"
+            fetchPriority="high"
             className="hero-card-image"
           />
         </div>
