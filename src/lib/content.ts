@@ -3,7 +3,7 @@ export const site = {
   subtitle: "NIT Jamshedpur × Department of Higher and Technical Education, Jharkhand",
   shortName: "NIT JSR – DHTE Internship Portal",
   phone: "8299797516",
-  nitContact: "training@nitjsr.ac.in",
+  nitContact: "internship@nitjsr.ac.in",
   dhteContact: "dhte.jharkhand@gov.in",
 } as const;
 
@@ -141,54 +141,36 @@ export type Result = {
 
 export const notices: Notice[] = [
   {
-    id: "n1",
-    title: "Advance notification for upcoming training batch",
-    date: "2026-03-10",
+    id: "n5",
+    title: "Shortlist result announcement — 26 May 2026",
+    date: "2026-05-26",
+    category: "Assessment",
+    isNew: true,
+    excerpt:
+      "Shortlisted candidates for industrial training at NIT Jamshedpur may check their status on the Results page from 26 May 2026 using registered email and mobile number.",
+    body: "The shortlist for the upcoming residential training batch is announced on 26 May 2026. Eligible diploma students should visit the Results section of this portal, enter the same email and mobile number submitted in their application, and confirm hostel accommodation preference where applicable. Students not on the shortlist will be informed on the portal after verification.",
+  },
+  {
+    id: "n6",
+    title: "Training commencement from 1 June 2026 (42 days)",
+    date: "2026-05-26",
     category: "Schedule",
     isNew: true,
     excerpt:
-      "As per MOU terms, batch schedule and instructions will be communicated to all Government Polytechnics at least 60 days before commencement.",
-    body: "NIT Jamshedpur, in coordination with DHTE Jharkhand, will publish the detailed training calendar, reporting dates, and document checklist for the next residential batch. Principals of participating polytechnics are requested to disseminate this notice to eligible diploma students.",
-  },
-  {
-    id: "n2",
-    title: "Biometric attendance and 80% eligibility rule",
-    date: "2026-03-08",
-    category: "General",
-    isNew: true,
-    excerpt:
-      "Attendance for training and hostel stay is tracked biometrically. Minimum 80% attendance is mandatory for final assessment.",
-    body: "Students must maintain regular attendance throughout the 6-week programme. Medical leave requires a valid certificate and prior approval from the student's parent polytechnic Principal.",
-  },
-  {
-    id: "n3",
-    title: "Approved fee structure for residential training",
-    date: "2026-03-06",
-    category: "Admission",
-    excerpt:
-      "Training, hostel, and mess are chargeable per student. NIT provides subsidized rates under the state MOU; exact amounts are communicated at admission.",
-    body: "All programme fees are chargeable. The consolidated amount covers skill training at discounted rates and residential facilities on campus where applicable. Hostel and mess charges follow actual daily rates at NIT Jamshedpur.",
-  },
-  {
-    id: "n4",
-    title: "Internal assessment and final presentation schedule",
-    date: "2026-02-28",
-    category: "Assessment",
-    excerpt:
-      "Assessment includes internal tests, project work, and a final presentation evaluated by NIT faculty.",
-    body: "Detailed assessment rubrics will be shared at the start of each batch. Results will be published on this portal after evaluation.",
-  },
+      "Residential industrial training at NIT Jamshedpur will commence on 1 June 2026 and continue for 42 days as per the approved batch schedule.",
+    body: "All shortlisted students are informed that the training programme will commence on 1 June 2026. The batch will run for 42 days on campus, including classroom sessions, laboratory work, and residential stay where hostel accommodation has been opted. Reporting instructions, document checklist, and chargeable fee details will be communicated through parent polytechnics and this portal. Students must maintain biometric attendance throughout the programme.",
+  }
 ];
 
 export const results: Result[] = [
   {
     id: "r1",
-    title: "Sample batch – assessment results (placeholder)",
-    date: "2026-02-20",
-    batch: "Mechanical Engineering – CAM Module (Pilot)",
+    title: "Shortlist announced — check your status",
+    date: "2026-05-26",
+    batch: "Industrial Training & Internship 2026",
     description:
-      "This entry is a placeholder. Official result PDFs and merit lists will be uploaded here after each training cycle is evaluated.",
-    fileLabel: "Results will be published here",
+      "Shortlist results are available from 26 May 2026. Use the form below with your registered email and mobile number to view your status and hostel accommodation options.",
+    fileLabel: "Check shortlist below",
   },
 ];
 
