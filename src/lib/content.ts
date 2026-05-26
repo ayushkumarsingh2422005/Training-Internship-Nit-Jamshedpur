@@ -2,7 +2,6 @@ export const site = {
   title: "Industrial Training & Internship Portal",
   subtitle: "NIT Jamshedpur × Department of Higher and Technical Education, Jharkhand",
   shortName: "NIT JSR – DHTE Internship Portal",
-  phone: "8299797516",
   nitContact: "internship@nitjsr.ac.in",
   dhteContact: "dhte.jharkhand@gov.in",
 } as const;
