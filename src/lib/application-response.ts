@@ -13,6 +13,7 @@ export type DbApplicationInput = {
   subpart: string;
   wantsAccommodation?: boolean | null;
   accommodationEnrolledAt?: unknown;
+  gender?: string | null;
 };
 
 export function toApplicationResponse(doc: DbApplicationInput): Application {
@@ -40,5 +41,6 @@ export function toApplicationResponse(doc: DbApplicationInput): Application {
         ? doc.wantsAccommodation
         : null,
     accommodationEnrolledAt,
+    gender: doc.gender?.trim() || null,
   };
 }

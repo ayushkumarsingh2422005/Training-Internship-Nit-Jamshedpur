@@ -6,9 +6,11 @@ import { CHAT_START_NODE, type ChatButton, getChatNode } from "@/lib/chatbot";
 import {
   formatAccommodationPrompt,
   formatAccommodationSaved,
+  formatGenderPrompt,
   formatShortlistFailure,
   formatShortlistSuccess,
 } from "@/lib/format-shortlist-chat";
+import type { Gender } from "@/lib/gender";
 import { site } from "@/lib/content";
 import {
   authHeaders,
@@ -83,6 +85,14 @@ function accommodationChoiceButtons(): ChatButton[] {
   ];
 }
 
+function genderChoiceButtons(): ChatButton[] {
+  return [
+    { id: "g-male", label: "Male", action: "accommodation_gender_male" },
+    { id: "g-female", label: "Female", action: "accommodation_gender_female" },
+    { id: "g-other", label: "Other", action: "accommodation_gender_other" },
+  ];
+}
+
 export function Chatbot() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -152,7 +162,7 @@ export function Chatbot() {
   );
 
   const saveAccommodation = useCallback(
-    async (wants: boolean) => {
+    async (wants: boolean, gender?: Gender) => {
       if (!getStudentSession()) {
         appendMessages([
           botMessage("Session expired. Please check your shortlist again with email and mobile.", [
@@ -163,13 +173,19 @@ export function Chatbot() {
       }
 
       setShortlistStep("saving_hostel");
-      appendMessages([userMessage(wants ? "Yes — I need hostel" : "No — own stay"), botMessage("Saving your preference…")]);
+      if (!gender) {
+        appendMessages([userMessage(wants ? "Yes — I need hostel" : "No — own stay")]);
+      }
+      appendMessages([botMessage("Saving your preference…")]);
 
       try {
         const response = await fetch("/api/applications/accommodation", {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders() },
-          body: JSON.stringify({ wantsAccommodation: wants }),
+          body: JSON.stringify({
+            wantsAccommodation: wants,
+            ...(wants && gender ? { gender } : {}),
+          }),
         });
 
         const data = (await response.json()) as {
@@ -191,7 +207,7 @@ export function Chatbot() {
         setCurrentApplication(data.application);
         appendMessages([
           botMessage(
-            `${formatAccommodationSaved(wants)}\n\n${formatShortlistSuccess(data.application)}`,
+            `${formatAccommodationSaved(wants, data.application.gender)}\n\n${formatShortlistSuccess(data.application)}`,
             afterShortlistButtons(data.application),
           ),
         ]);
@@ -328,12 +344,29 @@ export function Chatbot() {
     }
 
     if (button.action === "accommodation_yes") {
-      setTimeout(() => void saveAccommodation(true), 400);
+      setTimeout(() => {
+        appendMessages([botMessage(formatGenderPrompt(), genderChoiceButtons())]);
+      }, 400);
       return;
     }
 
     if (button.action === "accommodation_no") {
       setTimeout(() => void saveAccommodation(false), 400);
+      return;
+    }
+
+    if (button.action === "accommodation_gender_male") {
+      setTimeout(() => void saveAccommodation(true, "Male"), 400);
+      return;
+    }
+
+    if (button.action === "accommodation_gender_female") {
+      setTimeout(() => void saveAccommodation(true, "Female"), 400);
+      return;
+    }
+
+    if (button.action === "accommodation_gender_other") {
+      setTimeout(() => void saveAccommodation(true, "Other"), 400);
       return;
     }
 

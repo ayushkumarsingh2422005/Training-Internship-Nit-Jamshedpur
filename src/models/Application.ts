@@ -13,6 +13,7 @@ const applicationSchema = new Schema(
     subpart: { type: String, required: true, trim: true },
     wantsAccommodation: { type: Boolean, default: null },
     accommodationEnrolledAt: { type: Date, default: null },
+    gender: { type: String, default: null, trim: true },
   },
   {
     timestamps: true,

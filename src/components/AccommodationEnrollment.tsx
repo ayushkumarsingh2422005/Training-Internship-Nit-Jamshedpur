@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { GENDER_OPTIONS } from "@/lib/gender";
 import { authHeaders } from "@/lib/student-session-client";
 import type { Application } from "@/types/application";
 
@@ -12,15 +13,22 @@ type Props = {
 export function AccommodationEnrollment({ application, onUpdated }: Props) {
   const [editing, setEditing] = useState(application.wantsAccommodation == null);
   const [choice, setChoice] = useState<boolean | null>(application.wantsAccommodation ?? null);
+  const [gender, setGender] = useState<string | null>(application.gender ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
 
   const enrolled = application.wantsAccommodation !== null && application.wantsAccommodation !== undefined;
+  const needsGender = choice === true;
 
   async function handleSave() {
     if (choice === null) {
       setError("Please select whether you need hostel accommodation.");
+      return;
+    }
+
+    if (choice === true && !gender) {
+      setError("Please select your gender for hostel allocation.");
       return;
     }
 
@@ -35,7 +43,10 @@ export function AccommodationEnrollment({ application, onUpdated }: Props) {
           "Content-Type": "application/json",
           ...authHeaders(),
         },
-        body: JSON.stringify({ wantsAccommodation: choice }),
+        body: JSON.stringify({
+          wantsAccommodation: choice,
+          ...(choice === true ? { gender } : {}),
+        }),
       });
 
       const data = (await response.json()) as {
@@ -55,6 +66,7 @@ export function AccommodationEnrollment({ application, onUpdated }: Props) {
       }
 
       onUpdated(data.application);
+      setGender(data.application.gender ?? null);
       setEditing(false);
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 4000);
@@ -63,6 +75,13 @@ export function AccommodationEnrollment({ application, onUpdated }: Props) {
     } finally {
       setSaving(false);
     }
+  }
+
+  function startEdit() {
+    setChoice(application.wantsAccommodation ?? null);
+    setGender(application.gender ?? null);
+    setEditing(true);
+    setError(null);
   }
 
   return (
@@ -82,17 +101,11 @@ export function AccommodationEnrollment({ application, onUpdated }: Props) {
                 : "accommodation-badge accommodation-badge-no"
             }
           >
-            {application.wantsAccommodation ? "Enrolled: Hostel required" : "Enrolled: No hostel required"}
+            {application.wantsAccommodation
+              ? `Enrolled: Hostel required${application.gender ? ` (${application.gender})` : ""}`
+              : "Enrolled: No hostel required"}
           </span>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={() => {
-              setChoice(application.wantsAccommodation ?? null);
-              setEditing(true);
-              setError(null);
-            }}
-          >
+          <button type="button" className="btn btn-secondary btn-sm" onClick={startEdit}>
             Change
           </button>
         </div>
@@ -103,31 +116,63 @@ export function AccommodationEnrollment({ application, onUpdated }: Props) {
               type="radio"
               name="wantsAccommodation"
               checked={choice === true}
-              onChange={() => setChoice(true)}
+              onChange={() => {
+                setChoice(true);
+                setError(null);
+              }}
               disabled={saving}
             />
             <span>
               <strong>Yes</strong> — I need hostel accommodation
             </span>
           </label>
+
+          {needsGender ? (
+            <fieldset className="accommodation-gender-fieldset">
+              <legend>Select your gender (required for hostel)</legend>
+              <div className="accommodation-gender-options">
+                {GENDER_OPTIONS.map((option) => (
+                  <label
+                    key={option}
+                    className={`accommodation-option accommodation-option-compact${gender === option ? " selected" : ""}`}
+                  >
+                    <input
+                      type="radio"
+                      name="gender"
+                      checked={gender === option}
+                      onChange={() => setGender(option)}
+                      disabled={saving}
+                    />
+                    <span>{option}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ) : null}
+
           <label className={`accommodation-option${choice === false ? " selected" : ""}`}>
             <input
               type="radio"
               name="wantsAccommodation"
               checked={choice === false}
-              onChange={() => setChoice(false)}
+              onChange={() => {
+                setChoice(false);
+                setGender(null);
+                setError(null);
+              }}
               disabled={saving}
             />
             <span>
               <strong>No</strong> — I will arrange my own stay
             </span>
           </label>
+
           <div className="accommodation-actions">
             <button
               type="button"
               className="btn btn-green btn-sm"
               onClick={handleSave}
-              disabled={saving || choice === null}
+              disabled={saving || choice === null || (needsGender && !gender)}
             >
               {saving ? "Saving…" : enrolled ? "Update preference" : "Confirm enrollment"}
             </button>
@@ -138,6 +183,7 @@ export function AccommodationEnrollment({ application, onUpdated }: Props) {
                 onClick={() => {
                   setEditing(false);
                   setChoice(application.wantsAccommodation ?? null);
+                  setGender(application.gender ?? null);
                   setError(null);
                 }}
                 disabled={saving}

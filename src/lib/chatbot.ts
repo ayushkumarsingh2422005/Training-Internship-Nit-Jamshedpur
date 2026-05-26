@@ -23,7 +23,10 @@ export type ChatButton = {
     | "accommodation_yes"
     | "accommodation_no"
     | "accommodation_change"
-    | "accommodation_cancel";
+    | "accommodation_cancel"
+    | "accommodation_gender_male"
+    | "accommodation_gender_female"
+    | "accommodation_gender_other";
 };
 
 export type ChatNode = {

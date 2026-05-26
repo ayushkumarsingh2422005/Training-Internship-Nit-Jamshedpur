@@ -1786,6 +1786,34 @@ img {
   margin-top: 4px;
 }
 
+.accommodation-gender-fieldset {
+  margin: 0;
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.accommodation-gender-fieldset legend {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--green-dark);
+  padding: 0 4px;
+}
+
+.accommodation-gender-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.accommodation-option-compact {
+  flex: 1;
+  min-width: 88px;
+  padding: 8px 10px;
+}
+
 .accommodation-option {
   display: flex;
   align-items: flex-start;
@@ -1943,19 +1971,19 @@ img {
   z-index: 600;
   width: 56px;
   height: 56px;
-  border: 0;
+  border: 3px solid #fff;
   border-radius: 50%;
-  background: #1b5e20;
+  background: var(--green);
   color: #fff;
   cursor: pointer;
   display: grid;
   place-items: center;
-  box-shadow: 0 6px 20px rgba(27, 94, 32, 0.45);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   transition: transform 0.15s ease, background 0.15s ease;
 }
 
 .chat-fab:hover {
-  background: #2e7d32;
+  background: var(--green-dark);
   transform: scale(1.05);
 }
 
@@ -2195,6 +2223,7 @@ img {
   height: 44px;
   background: var(--green);
   color: #fff;
+  border: 3px solid #fff;
   border-radius: 50%;
   display: grid;
   place-items: center;

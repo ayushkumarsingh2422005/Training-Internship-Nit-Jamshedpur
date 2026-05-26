@@ -22,7 +22,7 @@ export function SiteFooter() {
           <h4>Programme</h4>
           <ul>
             <li>Duration: {programOverview.duration}</li>
-            <li>Capacity: {programOverview.capacity}</li>
+            {/* <li>Capacity: {programOverview.capacity}</li> */}
             <li>Host: {programOverview.host}</li>
           </ul>
         </div>
@@ -31,9 +31,6 @@ export function SiteFooter() {
           <ul>
             <li>
               <a href={`mailto:${site.nitContact}`}>{site.nitContact}</a>
-            </li>
-            <li>
-              Helpline: <a href={`tel:+91${site.phone}`}>{site.phone}</a>
             </li>
             <li>NIT Jamshedpur, Jharkhand – 831014</li>
           </ul>

@@ -2,7 +2,8 @@ import type { Application } from "@/types/application";
 
 export function hostelStatusLine(app: Application): string {
   if (app.wantsAccommodation === true) {
-    return "Hostel accommodation: Yes (confirmed)";
+    const genderPart = app.gender ? ` · Gender: ${app.gender}` : "";
+    return `Hostel accommodation: Yes (confirmed)${genderPart}`;
   }
   if (app.wantsAccommodation === false) {
     return "Hostel accommodation: No — own arrangements (confirmed)";
@@ -37,8 +38,15 @@ export function formatAccommodationPrompt(): string {
   ].join("\n");
 }
 
-export function formatAccommodationSaved(wants: boolean): string {
-  return wants
-    ? "Your preference is saved: Yes, I need hostel accommodation at NIT Jamshedpur."
-    : "Your preference is saved: No, I will arrange my own stay.";
+export function formatAccommodationSaved(wants: boolean, gender?: string | null): string {
+  if (wants) {
+    return gender
+      ? `Your preference is saved: Yes, hostel required (Gender: ${gender}).`
+      : "Your preference is saved: Yes, I need hostel accommodation at NIT Jamshedpur.";
+  }
+  return "Your preference is saved: No, I will arrange my own stay.";
+}
+
+export function formatGenderPrompt(): string {
+  return "Please select your gender for hostel allocation:";
 }

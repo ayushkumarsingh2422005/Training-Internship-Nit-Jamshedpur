@@ -11,4 +11,5 @@ export type Application = {
   subpart: string;
   wantsAccommodation?: boolean | null;
   accommodationEnrolledAt?: string | null;
+  gender?: string | null;
 };

@@ -13,7 +13,7 @@ export const programOverview = {
   partner: "Department of Higher and Technical Education, Government of Jharkhand",
   audience:
     "Students enrolled in Government Polytechnic and Government Women's Polytechnic colleges in Jharkhand",
-  capacity: "Up to 500 students per year",
+  // capacity: "Up to 500 students per year",
   duration: "6 weeks",
   notificationLead: "Training schedules and notices are published at least 60 days in advance to DHTE and all participating polytechnics.",
   approval:
