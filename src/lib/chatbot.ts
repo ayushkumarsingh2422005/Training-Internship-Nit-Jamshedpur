@@ -17,6 +17,14 @@ export type ChatButton = {
   label: string;
   nextNodeId?: string;
   href?: string;
+  /** In-chat shortlist / hostel actions (handled in Chatbot.tsx). */
+  action?:
+    | "shortlist_check"
+    | "shortlist_logout"
+    | "accommodation_yes"
+    | "accommodation_no"
+    | "accommodation_change"
+    | "accommodation_cancel";
 };
 
 export type ChatNode = {
@@ -30,6 +38,7 @@ function branchNodeId(branch: string) {
 }
 
 const mainMenuButtons: ChatButton[] = [
+  { id: "m-shortlist", label: "Check my shortlist", action: "shortlist_check" },
   { id: "m-about", label: "About the programme", nextNodeId: "about" },
   { id: "m-eligible", label: "Who can join?", nextNodeId: "eligibility" },
   { id: "m-courses", label: "Training modules", nextNodeId: "courses_menu" },
@@ -94,7 +103,7 @@ export const chatNodes: Record<string, ChatNode> = {
     id: "start",
     messages: [
       `Welcome to the ${site.shortName} assistant.`,
-      "I can help with programme details, fees, attendance, training modules, notices, results, and contact information.",
+      "I can help with programme details, shortlist status (email + mobile), hostel accommodation enrollment, fees, training modules, notices, and contact information.",
       "Tap an option below to continue — just like a WhatsApp chatbot.",
     ],
     buttons: [{ id: "start-menu", label: "Get started", nextNodeId: "menu" }],
@@ -189,13 +198,14 @@ export const chatNodes: Record<string, ChatNode> = {
     id: "assessment",
     messages: [
       "Assessment includes internal tests, project work, workshops, and a final presentation by NIT faculty.",
-      "Results are published on this portal after each batch evaluation.",
+      "Shortlisted students can enter email and mobile in this chat to view status and confirm hostel accommodation (yes/no).",
     ],
     buttons: withMenu(
       [
-        { id: "ass-results", label: "Results status", nextNodeId: "results" },
+        { id: "ass-shortlist", label: "Check my shortlist", action: "shortlist_check" },
+        { id: "ass-results", label: "Batch announcements", nextNodeId: "results" },
         { id: "ass-notice", label: "Assessment notice", nextNodeId: "notice_n4" },
-        { id: "ass-page", label: "View my result", href: "/results#check-shortlist" },
+        { id: "ass-page", label: "Open Results page", href: "/results#check-shortlist" },
       ],
       "menu",
     ),
@@ -268,7 +278,10 @@ export const chatNodes: Record<string, ChatNode> = {
         : results.map((r) => `${r.title}\n${formatDate(r.date)} · ${r.batch}\n${r.description}`).join("\n\n"),
     ],
     buttons: withMenu(
-      [{ id: "results-page", label: "View my result", href: "/results#check-shortlist" }],
+      [
+        { id: "results-shortlist", label: "Check my shortlist", action: "shortlist_check" },
+        { id: "results-page", label: "Open Results page", href: "/results#check-shortlist" },
+      ],
       "menu",
     ),
   },
