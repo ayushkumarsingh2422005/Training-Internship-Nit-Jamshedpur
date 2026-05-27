@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next"
 import type { Metadata } from "next";
 import { Noto_Sans } from "next/font/google";
 import Script from "next/script";
@@ -32,6 +33,7 @@ export default function RootLayout({
           {`(function(){try{var v=localStorage.getItem("font-size-level");if(v==="0"||v==="1"||v==="2"||v==="3")document.documentElement.setAttribute("data-font-size-level",v)}catch(e){}})();`}
         </Script>
         <ConditionalPageShell>{children}</ConditionalPageShell>
+        <Analytics />
       </body>
     </html>
   );
