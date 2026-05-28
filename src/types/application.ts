@@ -12,4 +12,6 @@ export type Application = {
   wantsAccommodation?: boolean | null;
   accommodationEnrolledAt?: string | null;
   gender?: string | null;
+  hasLaptop?: boolean | null;
+  laptopUpdatedAt?: string | null;
 };

@@ -1,9 +1,16 @@
 import Link from "next/link";
-import { notices } from "@/lib/content";
+import type { PublicNotice } from "@/lib/notices";
 
-export function NewsTicker() {
+type NewsTickerProps = {
+  notices: PublicNotice[];
+};
+
+export function NewsTicker({ notices }: NewsTickerProps) {
   const items = notices.filter((n) => n.isNew).length > 0 ? notices.filter((n) => n.isNew) : notices.slice(0, 3);
-  const tickerText = items.map((n) => n.excerpt).join("   •   ");
+  const tickerText =
+    items.length > 0
+      ? items.map((n) => n.excerpt).join("   •   ")
+      : "Latest programme notices will be published here shortly.";
   const scrollText = `${tickerText}   •   ${tickerText}`;
 
   return (

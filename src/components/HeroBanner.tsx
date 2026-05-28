@@ -11,7 +11,7 @@ export function HeroBanner() {
           <h1 id="hero-title">Industrial Training &amp; Internship at NIT Jamshedpur</h1>
           <p className="hero-lead">
             Residential skill-development programme for diploma students of Government Polytechnic colleges — notices,
-            schedules, and results published here.
+            schedules, and login/profile updates published here.
           </p>
           <ul className="hero-points">
             <li>{programOverview.duration} residential training at NIT Jamshedpur</li>
@@ -23,7 +23,7 @@ export function HeroBanner() {
               View Notices
             </Link>
             <Link href="/results#check-shortlist" className="btn btn-outline">
-              View my result
+              Login &amp; Profile
             </Link>
           </div>
         </div>

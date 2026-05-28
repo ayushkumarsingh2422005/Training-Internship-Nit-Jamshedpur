@@ -53,7 +53,7 @@ export function SiteHeader() {
                 Notices
               </Link>
               <Link href="/results#check-shortlist" className="btn-pill btn-pill-green">
-                View my result
+                Login & Profile
               </Link>
             </div>
           </div>

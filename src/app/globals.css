@@ -1652,6 +1652,72 @@ img {
   margin-top: 14px;
 }
 
+.profile-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.profile-tab {
+  border: 1px solid var(--border);
+  background: #fff;
+  color: #2f3d34;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-tab:hover {
+  border-color: #7cbf84;
+}
+
+.profile-tab.active {
+  border-color: #2e7d32;
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.profile-tab-badge {
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.profile-tab-badge.pending {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.profile-tab-panel {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fafdf9;
+  padding: 12px;
+}
+
+.profile-result-placeholder {
+  padding: 6px 4px;
+}
+
+.profile-result-placeholder h4 {
+  margin: 0 0 4px;
+  color: var(--green-dark);
+}
+
+.profile-result-placeholder p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
 .shortlist-success-banner {
   display: flex;
   align-items: center;
@@ -2407,7 +2473,7 @@ img {
 
 .admin-filters-row {
   display: grid;
-  grid-template-columns: 2fr repeat(4, 1fr);
+  grid-template-columns: 2fr repeat(5, 1fr);
   gap: 12px;
   margin-bottom: 12px;
 }
@@ -2421,6 +2487,21 @@ img {
 .admin-filters-actions {
   display: flex;
   gap: 8px;
+}
+
+.admin-filters .form-field textarea,
+.admin-filters .form-field select,
+.admin-filters .form-field input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  background: #fff;
+}
+
+.admin-filters .form-field textarea {
+  resize: vertical;
 }
 
 .admin-error,
@@ -2501,4 +2582,52 @@ img {
   gap: 16px;
   margin-top: 20px;
   flex-wrap: wrap;
+}
+
+.admin-section-switcher {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.admin-notices-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1080px) {
+  .admin-notices-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-notice-form h2 {
+  margin: 0 0 14px;
+  color: var(--green-dark);
+  font-size: 1.2rem;
+}
+
+.admin-notice-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.admin-notice-checks label {
+  font-size: 0.9rem;
+  color: #2b2b2b;
+}
+
+.admin-row-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.admin-muted {
+  font-size: 0.8rem;
+  color: #666;
 }

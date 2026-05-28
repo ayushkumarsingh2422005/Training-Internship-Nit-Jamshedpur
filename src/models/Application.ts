@@ -14,6 +14,8 @@ const applicationSchema = new Schema(
     wantsAccommodation: { type: Boolean, default: null },
     accommodationEnrolledAt: { type: Date, default: null },
     gender: { type: String, default: null, trim: true },
+    hasLaptop: { type: Boolean, default: null },
+    laptopUpdatedAt: { type: Date, default: null },
   },
   {
     timestamps: true,

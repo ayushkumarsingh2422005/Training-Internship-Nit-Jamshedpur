@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: `%s | ${site.shortName}`,
   },
   description:
-    "Official portal for notices, results, and programme information on industrial training and internships at NIT Jamshedpur under DHTE Jharkhand.",
+    "Official portal for notices, login/profile access, and programme information on industrial training and internships at NIT Jamshedpur under DHTE Jharkhand.",
 };
 
 export default function RootLayout({

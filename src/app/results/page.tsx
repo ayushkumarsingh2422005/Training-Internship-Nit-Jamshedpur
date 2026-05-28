@@ -3,7 +3,7 @@ import { ShortlistLookup } from "@/components/ShortlistLookup";
 import { formatDate, results } from "@/lib/content";
 
 export const metadata: Metadata = {
-  title: "Results",
+  title: "Login & Profile",
 };
 
 export default function ResultsPage() {
@@ -11,10 +11,10 @@ export default function ResultsPage() {
     <main className="page-main">
       <div className="container">
         <header className="page-header">
-          <h1>Results &amp; Shortlist</h1>
+          <h1>Login &amp; Profile</h1>
           <p className="page-lead">
-            Check whether your application has been shortlisted for industrial training at NIT Jamshedpur. Use the
-            email and mobile number from your original application.
+            Log in with your registered email and mobile number to check shortlist status and view your profile details
+            for industrial training at NIT Jamshedpur.
           </p>
         </header>
 

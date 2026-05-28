@@ -55,7 +55,7 @@ export default function ContactPage() {
             <p>{programOverview.notificationLead}</p>
             <p>
               Students should follow instructions issued by their parent polytechnic and refer to this portal for
-              centralized notices and results.
+              centralized notices and login/profile access.
             </p>
           </section>
         </div>

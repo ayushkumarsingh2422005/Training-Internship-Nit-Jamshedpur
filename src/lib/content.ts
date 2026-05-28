@@ -146,8 +146,8 @@ export const notices: Notice[] = [
     category: "Admission",
     isNew: true,
     excerpt:
-      "Every shortlisted student must confirm on the Results page whether hostel accommodation is required. If yes, gender (Male, Female, or Other) must also be selected.",
-    body: "All students on the shortlist are required to update their hostel accommodation preference on this portal without delay. On the Results page, sign in with your registered email and mobile number, then choose whether you need hostel accommodation at NIT Jamshedpur or not. If you select Yes, you must also choose your gender (Male, Female, or Other) so that hostel allotment can be planned correctly. If you select No, no gender entry is needed. You may change your choice until the reporting deadline using the same Results login. Students who do not complete this step may face delays in hostel allocation and on-campus reporting.",
+      "Every shortlisted student must confirm on the Login & Profile page whether hostel accommodation is required. If yes, gender (Male, Female, or Other) must also be selected.",
+    body: "All students on the shortlist are required to update their hostel accommodation preference on this portal without delay. On the Login & Profile page, sign in with your registered email and mobile number, then choose whether you need hostel accommodation at NIT Jamshedpur or not. If you select Yes, you must also choose your gender (Male, Female, or Other) so that hostel allotment can be planned correctly. If you select No, no gender entry is needed. You may change your choice until the reporting deadline using the same Login & Profile access. Students who do not complete this step may face delays in hostel allocation and on-campus reporting.",
   },
   {
     id: "n5",
@@ -155,8 +155,8 @@ export const notices: Notice[] = [
     date: "2026-05-26",
     category: "Assessment",
     excerpt:
-      "Shortlisted candidates for industrial training at NIT Jamshedpur may check their status on the Results page from 26 May 2026 using registered email and mobile number.",
-    body: "The shortlist for the upcoming residential training batch is announced on 26 May 2026. Eligible diploma students should visit the Results section of this portal, enter the same email and mobile number submitted in their application, and confirm hostel accommodation preference where applicable. Students not on the shortlist will be informed on the portal after verification.",
+      "Shortlisted candidates for industrial training at NIT Jamshedpur may check their status on the Login & Profile page from 26 May 2026 using registered email and mobile number.",
+    body: "The shortlist for the upcoming residential training batch is announced on 26 May 2026. Eligible diploma students should visit the Login & Profile section of this portal, enter the same email and mobile number submitted in their application, and confirm hostel accommodation preference where applicable. Students not on the shortlist will be informed on the portal after verification.",
   },
   {
     id: "n6",
@@ -176,7 +176,7 @@ export const results: Result[] = [
     date: "2026-05-26",
     batch: "Industrial Training & Internship 2026",
     description:
-      "Shortlist results are available from 26 May 2026. Use the form below with your registered email and mobile number to view your status and hostel accommodation options.",
+      "Shortlist status is available from 26 May 2026. Use the Login & Profile form below with your registered email and mobile number to view your status and hostel accommodation options.",
     fileLabel: "Check shortlist below",
   },
 ];
@@ -186,7 +186,7 @@ export const navLinks = [
   { href: "/about", label: "About the Programme" },
   { href: "/program", label: "Training Modules" },
   { href: "/notices", label: "Notices" },
-  { href: "/results", label: "Results" },
+  { href: "/results", label: "Login & Profile" },
   { href: "/contact", label: "Contact" },
 ] as const;
 

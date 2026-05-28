@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AccommodationEnrollment } from "@/components/AccommodationEnrollment";
+import { LaptopAvailabilityEnrollment } from "@/components/LaptopAvailabilityEnrollment";
+import { StudentProfileEditor } from "@/components/StudentProfileEditor";
 import {
   authHeaders,
   clearStudentSession,
@@ -18,21 +20,13 @@ type LookupState =
   | { status: "not-shortlisted" }
   | { status: "error"; message: string };
 
-const COMPACT_DETAILS: { key: keyof Application; label: string }[] = [
-  { key: "fullName", label: "Name" },
-  { key: "fatherName", label: "Father / guardian" },
-  { key: "email", label: "Email" },
-  { key: "phoneNumber", label: "Mobile" },
-  { key: "collegeName", label: "College" },
-  { key: "schoolName", label: "School" },
-  { key: "subject", label: "Branch" },
-  { key: "subpart", label: "Module" },
-];
+type ProfileTab = "info" | "hostel" | "laptop" | "attendance" | "certificate";
 
 export function ShortlistLookup() {
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [state, setState] = useState<LookupState>({ status: "restoring" });
+  const [activeTab, setActiveTab] = useState<ProfileTab>("info");
 
   const restoreSession = useCallback(async () => {
     const token = getStudentSession();
@@ -123,19 +117,32 @@ export function ShortlistLookup() {
   const isLoggedIn = state.status === "shortlisted";
   const showForm = !isLoggedIn && !isRestoring;
 
+  useEffect(() => {
+    if (state.status !== "shortlisted") return;
+    if (state.application.wantsAccommodation == null) {
+      setActiveTab("hostel");
+      return;
+    }
+    if (state.application.hasLaptop == null) {
+      setActiveTab("laptop");
+      return;
+    }
+    setActiveTab("info");
+  }, [state]);
+
   return (
     <section className="shortlist-lookup" id="check-shortlist" aria-labelledby="shortlist-lookup-title">
       <div className="shortlist-lookup-card">
         <header className="shortlist-lookup-header compact">
           <div className="shortlist-header-row">
             <div>
-              <h2 id="shortlist-lookup-title">Check shortlist &amp; accommodation</h2>
+              <h2 id="shortlist-lookup-title">Check shortlist, profile &amp; preferences</h2>
               {isLoggedIn ? (
-                <p>Signed in on this device. Your details and hostel preference are below.</p>
+                <p>Signed in on this device. Use tabs to manage your profile, hostel preference, and laptop status.</p>
               ) : (
                 <p>
                   Enter the <strong>email and mobile</strong> from your application to view your result and enroll
-                  for hostel.
+                  for hostel and laptop availability.
                 </p>
               )}
             </div>
@@ -188,7 +195,7 @@ export function ShortlistLookup() {
             </div>
             <div className="shortlist-form-actions">
               <button type="submit" className="btn btn-green btn-sm" disabled={isLoading}>
-                {isLoading ? "Checking…" : "View my result"}
+                {isLoading ? "Checking…" : "View my profile"}
               </button>
             </div>
           </form>
@@ -219,20 +226,89 @@ export function ShortlistLookup() {
               </div>
             </div>
 
-            <dl className="shortlist-details compact-grid">
-              {COMPACT_DETAILS.map(({ key, label }) => (
-                <div key={key}>
-                  <dt>{label}</dt>
-                  <dd>{state.application[key]}</dd>
-                </div>
-              ))}
-              <div className="compact-grid-full">
-                <dt>Address</dt>
-                <dd>{state.application.address}</dd>
-              </div>
-            </dl>
+            <div className="profile-tabs" role="tablist" aria-label="Profile sections">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "info"}
+                className={`profile-tab${activeTab === "info" ? " active" : ""}`}
+                onClick={() => setActiveTab("info")}
+              >
+                Profile Info
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "hostel"}
+                className={`profile-tab${activeTab === "hostel" ? " active" : ""}`}
+                onClick={() => setActiveTab("hostel")}
+              >
+                Hostel Preference
+                {state.application.wantsAccommodation == null ? <span className="profile-tab-badge pending">Pending</span> : null}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "laptop"}
+                className={`profile-tab${activeTab === "laptop" ? " active" : ""}`}
+                onClick={() => setActiveTab("laptop")}
+              >
+                Laptop Availability
+                {state.application.hasLaptop == null ? <span className="profile-tab-badge pending">Pending</span> : null}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "attendance"}
+                className={`profile-tab${activeTab === "attendance" ? " active" : ""}`}
+                onClick={() => setActiveTab("attendance")}
+              >
+                Attendance
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "certificate"}
+                className={`profile-tab${activeTab === "certificate" ? " active" : ""}`}
+                onClick={() => setActiveTab("certificate")}
+              >
+                Certificate
+              </button>
+            </div>
 
-            <AccommodationEnrollment application={state.application} onUpdated={updateApplication} />
+            <div className="profile-tab-panel">
+              {activeTab === "info" ? (
+                <StudentProfileEditor application={state.application} onUpdated={updateApplication} />
+              ) : null}
+
+              {activeTab === "hostel" ? (
+                <AccommodationEnrollment application={state.application} onUpdated={updateApplication} />
+              ) : null}
+
+              {activeTab === "laptop" ? (
+                <LaptopAvailabilityEnrollment application={state.application} onUpdated={updateApplication} />
+              ) : null}
+
+              {activeTab === "attendance" ? (
+                <div className="profile-result-placeholder">
+                  <h4>Attendance details will be available here</h4>
+                  <p>
+                    This tab is reserved for attendance tracking and updates in future. Your current shortlist status is
+                    shown above.
+                  </p>
+                </div>
+              ) : null}
+
+              {activeTab === "certificate" ? (
+                <div className="profile-result-placeholder">
+                  <h4>Certificate section will be available here</h4>
+                  <p>
+                    This tab is reserved for certificate preview/download in future. Keep your profile details updated
+                    for correct certificate generation.
+                  </p>
+                </div>
+              ) : null}
+            </div>
           </div>
         ) : null}
       </div>

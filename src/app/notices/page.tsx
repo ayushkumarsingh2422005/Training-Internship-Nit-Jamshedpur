@@ -1,11 +1,24 @@
 import type { Metadata } from "next";
-import { formatDate, notices } from "@/lib/content";
+import { formatDate, notices as fallbackNotices } from "@/lib/content";
+import { getPublishedNotices } from "@/lib/notices";
 
 export const metadata: Metadata = {
   title: "Notices",
 };
 
-export default function NoticesPage() {
+export default async function NoticesPage() {
+  const notices = await getPublishedNotices().catch(() =>
+    fallbackNotices.map((item) => ({
+      id: item.id,
+      title: item.title,
+      date: item.date,
+      category: item.category,
+      excerpt: item.excerpt,
+      body: item.body,
+      isNew: Boolean(item.isNew),
+    })),
+  );
+
   return (
     <main className="page-main">
       <div className="container">

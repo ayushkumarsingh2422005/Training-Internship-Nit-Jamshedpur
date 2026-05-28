@@ -1,13 +1,16 @@
 /**
- * Load public/data.json into MongoDB (applications collection).
+ * Load public/data.json and notice seeds into MongoDB.
  * Usage: npm run db:seed
- * Options: --reset  drop applications collection before insert
+ * Options: --reset  drop applications and notices collections before insert
  */
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import mongoose from "mongoose";
 import Application, { type ApplicationInput } from "../src/models/Application";
+import Notice from "../src/models/Notice";
+import { notices } from "../src/lib/content";
+import { normalizeNoticeSeed } from "../src/lib/notices";
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
@@ -20,6 +23,10 @@ function normalizePhone(value: string): string {
 }
 
 function loadApplications(): ApplicationInput[] {
+  if (!fs.existsSync(DATA_PATH)) {
+    console.warn(`Applications seed file not found at ${DATA_PATH}. Skipping applications seed.`);
+    return [];
+  }
   const raw = JSON.parse(fs.readFileSync(DATA_PATH, "utf-8")) as ApplicationInput[];
   if (!Array.isArray(raw)) {
     throw new Error("data.json must be a JSON array of applications");
@@ -44,7 +51,9 @@ async function main() {
   }
 
   const applications = loadApplications();
-  console.log(`Loaded ${applications.length} records from ${DATA_PATH}`);
+  if (applications.length > 0) {
+    console.log(`Loaded ${applications.length} records from ${DATA_PATH}`);
+  }
 
   await mongoose.connect(uri);
   console.log("Connected to MongoDB");
@@ -53,25 +62,56 @@ async function main() {
     await Application.collection.drop().catch(() => {
       /* collection may not exist yet */
     });
-    console.log("Dropped applications collection");
+    await Notice.collection.drop().catch(() => {
+      /* collection may not exist yet */
+    });
+    console.log("Dropped applications and notices collections");
   }
 
-  const ops = applications.map((doc) => ({
-    updateOne: {
-      filter: { email: doc.email },
-      update: { $set: doc },
-      upsert: true,
-    },
-  }));
+  let result = { upsertedCount: 0, modifiedCount: 0, matchedCount: 0 };
+  let total = 0;
+  if (applications.length > 0) {
+    const ops = applications.map((doc) => ({
+      updateOne: {
+        filter: { email: doc.email },
+        update: { $set: doc },
+        upsert: true,
+      },
+    }));
 
-  const result = await Application.bulkWrite(ops, { ordered: false });
-  const total = await Application.countDocuments();
+    const writeResult = await Application.bulkWrite(ops, { ordered: false });
+    result = {
+      upsertedCount: writeResult.upsertedCount,
+      modifiedCount: writeResult.modifiedCount,
+      matchedCount: writeResult.matchedCount,
+    };
+    total = await Application.countDocuments();
+  }
+
+  const noticeOps = notices.map((notice) => {
+    const normalized = normalizeNoticeSeed(notice);
+    return {
+      updateOne: {
+        filter: { legacyId: normalized.legacyId },
+        update: { $set: normalized },
+        upsert: true,
+      },
+    };
+  });
+
+  const noticeResult = await Notice.bulkWrite(noticeOps, { ordered: false });
+  const noticeTotal = await Notice.countDocuments();
 
   console.log("\nSeed complete:");
   console.log(`  Upserted: ${result.upsertedCount}`);
   console.log(`  Modified: ${result.modifiedCount}`);
   console.log(`  Matched:  ${result.matchedCount}`);
   console.log(`  Total in DB: ${total}`);
+  console.log("\nNotices seed:");
+  console.log(`  Upserted: ${noticeResult.upsertedCount}`);
+  console.log(`  Modified: ${noticeResult.modifiedCount}`);
+  console.log(`  Matched:  ${noticeResult.matchedCount}`);
+  console.log(`  Total notices in DB: ${noticeTotal}`);
 
   await mongoose.disconnect();
 }

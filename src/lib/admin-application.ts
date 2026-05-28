@@ -21,6 +21,13 @@ export function toAdminApplication(doc: AdminDoc): AdminApplication {
     if (!Number.isNaN(date.getTime())) accommodationEnrolledAt = date.toISOString();
   }
 
+  const laptopAt = doc.laptopUpdatedAt;
+  let laptopUpdatedAt: string | null = null;
+  if (laptopAt != null && laptopAt !== "") {
+    const date = laptopAt instanceof Date ? laptopAt : new Date(String(laptopAt));
+    if (!Number.isNaN(date.getTime())) laptopUpdatedAt = date.toISOString();
+  }
+
   let createdAt: string | null = null;
   let updatedAt: string | null = null;
   const created = doc.createdAt;
@@ -51,6 +58,8 @@ export function toAdminApplication(doc: AdminDoc): AdminApplication {
         : null,
     accommodationEnrolledAt,
     gender: doc.gender?.trim() || null,
+    hasLaptop: doc.hasLaptop === true || doc.hasLaptop === false ? doc.hasLaptop : null,
+    laptopUpdatedAt,
     createdAt,
     updatedAt,
   };

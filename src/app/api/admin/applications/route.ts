@@ -15,6 +15,7 @@ export async function GET(request: Request) {
     const subject = searchParams.get("subject")?.trim() ?? "";
     const subpart = searchParams.get("subpart")?.trim() ?? "";
     const accommodation = searchParams.get("accommodation") ?? "";
+    const laptop = searchParams.get("laptop") ?? "";
     const gender = searchParams.get("gender")?.trim() ?? "";
     const page = Math.max(Number(searchParams.get("page") ?? 1), 1);
     const limit = Math.min(Math.max(Number(searchParams.get("limit") ?? 50), 1), 200);
@@ -28,6 +29,9 @@ export async function GET(request: Request) {
     if (accommodation === "yes") filter.wantsAccommodation = true;
     else if (accommodation === "no") filter.wantsAccommodation = false;
     else if (accommodation === "unset") filter.wantsAccommodation = null;
+    if (laptop === "yes") filter.hasLaptop = true;
+    else if (laptop === "no") filter.hasLaptop = false;
+    else if (laptop === "unset") filter.hasLaptop = null;
 
     if (q) {
       const regex = { $regex: q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" };
@@ -46,7 +50,7 @@ export async function GET(request: Request) {
 
     const skip = (page - 1) * limit;
 
-    const [items, total, subjects, subparts, hostelYes, hostelNo, hostelUnset] = await Promise.all([
+    const [items, total, subjects, subparts, hostelYes, hostelNo, hostelUnset, laptopYes, laptopNo, laptopUnset] = await Promise.all([
       Application.find(filter).sort({ fullName: 1 }).skip(skip).limit(limit).lean(),
       Application.countDocuments(filter),
       Application.distinct("subject"),
@@ -54,6 +58,9 @@ export async function GET(request: Request) {
       Application.countDocuments({ ...filter, wantsAccommodation: true }),
       Application.countDocuments({ ...filter, wantsAccommodation: false }),
       Application.countDocuments({ ...filter, wantsAccommodation: null }),
+      Application.countDocuments({ ...filter, hasLaptop: true }),
+      Application.countDocuments({ ...filter, hasLaptop: false }),
+      Application.countDocuments({ ...filter, hasLaptop: null }),
     ]);
 
     return NextResponse.json({
@@ -69,6 +76,9 @@ export async function GET(request: Request) {
         hostelYes,
         hostelNo,
         hostelUnset,
+        laptopYes,
+        laptopNo,
+        laptopUnset,
       },
     });
   } catch (error) {

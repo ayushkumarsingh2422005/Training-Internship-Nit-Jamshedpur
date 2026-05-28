@@ -3,22 +3,34 @@ import Link from "next/link";
 import { HeroBanner } from "@/components/HeroBanner";
 import { NewsTicker } from "@/components/NewsTicker";
 import { StatCard } from "@/components/StatCard";
+import { getPublishedNotices } from "@/lib/notices";
 import {
   certification,
   formatDate,
-  notices,
+  notices as fallbackNotices,
   performanceTargets,
   programOverview,
   results,
 } from "@/lib/content";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const notices = await getPublishedNotices().catch(() =>
+    fallbackNotices.map((item) => ({
+      id: item.id,
+      title: item.title,
+      date: item.date,
+      category: item.category,
+      excerpt: item.excerpt,
+      body: item.body,
+      isNew: Boolean(item.isNew),
+    })),
+  );
   const latestNotices = notices.slice(0, 4);
 
   return (
     <>
       <HeroBanner />
-      <NewsTicker />
+      <NewsTicker notices={notices} />
 
       <section className="section-light">
         <div className="container home-about">
@@ -100,9 +112,9 @@ export default function HomePage() {
 
           <div>
             <div className="section-head">
-              <h2>Results</h2>
+              <h2>Login &amp; Profile</h2>
               <Link href="/results#check-shortlist" className="text-link">
-                View my result
+                Open section
               </Link>
             </div>
             <ul className="notice-list compact">
@@ -116,7 +128,7 @@ export default function HomePage() {
               ))}
             </ul>
             <p className="muted-note">
-              Result PDFs and merit lists will be published after each batch evaluation.
+              Log in with registered details to check your shortlist status and profile details.
             </p>
           </div>
         </div>
