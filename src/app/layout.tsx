@@ -27,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={notoSans.variable} suppressHydrationWarning>
+    <html lang="en" className={notoSans.variable} suppressHydrationWarning data-scroll-behavior="smooth">
       <body suppressHydrationWarning>
         <Script id="font-size-init" strategy="beforeInteractive">
           {`(function(){try{var v=localStorage.getItem("font-size-level");if(v==="0"||v==="1"||v==="2"||v==="3")document.documentElement.setAttribute("data-font-size-level",v)}catch(e){}})();`}
