@@ -110,6 +110,7 @@ export function AdminDashboard() {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingApplicationId, setDeletingApplicationId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [adminNotices, setAdminNotices] = useState<AdminNotice[]>([]);
   const [noticeLoading, setNoticeLoading] = useState(true);
@@ -204,6 +205,34 @@ export function AdminDashboard() {
     await fetch("/api/admin/logout", { method: "POST" });
     router.push("/admin/login");
     router.refresh();
+  }
+
+  async function deleteApplication(app: AdminApplication) {
+    const confirmed = window.confirm(`Delete student record for ${app.fullName}? This cannot be undone.`);
+    if (!confirmed) return;
+
+    setDeletingApplicationId(app.id);
+    setError(null);
+    try {
+      const response = await fetch(`/api/admin/applications?id=${encodeURIComponent(app.id)}`, { method: "DELETE" });
+      const json = (await response.json()) as { error?: string };
+      if (response.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
+      if (!response.ok) {
+        setError(json.error ?? "Failed to delete application.");
+        return;
+      }
+      if (expandedId === app.id) {
+        setExpandedId(null);
+      }
+      await load();
+    } catch {
+      setError("Network error while deleting application.");
+    } finally {
+      setDeletingApplicationId(null);
+    }
   }
 
   async function saveNotice(event: React.FormEvent) {
@@ -477,13 +506,23 @@ export function AdminDashboard() {
                       <td>{hostelLabel(app)}</td>
                       <td>{laptopLabel(app)}</td>
                       <td>
-                        <button
-                          type="button"
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => setExpandedId(expandedId === app.id ? null : app.id)}
-                        >
-                          {expandedId === app.id ? "Hide" : "More"}
-                        </button>
+                        <div className="admin-row-actions">
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => setExpandedId(expandedId === app.id ? null : app.id)}
+                          >
+                            {expandedId === app.id ? "Hide" : "More"}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-outline-admin btn-sm"
+                            onClick={() => void deleteApplication(app)}
+                            disabled={deletingApplicationId === app.id}
+                          >
+                            {deletingApplicationId === app.id ? "Deleting..." : "Delete"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     {expandedId === app.id ? (

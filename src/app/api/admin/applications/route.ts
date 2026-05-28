@@ -86,3 +86,28 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Failed to load applications." }, { status: 500 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    if (!(await getAdminSessionFromRequest(request))) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id")?.trim();
+    if (!id) {
+      return NextResponse.json({ error: "Application id is required." }, { status: 400 });
+    }
+
+    await connectDB();
+    const deleted = await Application.findByIdAndDelete(id).lean();
+    if (!deleted) {
+      return NextResponse.json({ error: "Application not found." }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("DELETE /api/admin/applications", error);
+    return NextResponse.json({ error: "Failed to delete application." }, { status: 500 });
+  }
+}
