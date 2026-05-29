@@ -11,6 +11,7 @@ import {
   saveStudentSession,
 } from "@/lib/student-session-client";
 import type { Application } from "@/types/application";
+import { useTopLoading } from "@/components/TopLoadingProvider";
 
 type LookupState =
   | { status: "idle" }
@@ -27,6 +28,12 @@ export function ShortlistLookup() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [state, setState] = useState<LookupState>({ status: "restoring" });
   const [activeTab, setActiveTab] = useState<ProfileTab>("info");
+
+  const isRestoring = state.status === "restoring";
+  const isLoading = state.status === "loading";
+  const isLoggedIn = state.status === "shortlisted";
+
+  useTopLoading(isRestoring || isLoading);
 
   const restoreSession = useCallback(async () => {
     const token = getStudentSession();
@@ -112,9 +119,6 @@ export function ShortlistLookup() {
     setState({ status: "shortlisted", application });
   }
 
-  const isRestoring = state.status === "restoring";
-  const isLoading = state.status === "loading";
-  const isLoggedIn = state.status === "shortlisted";
   const showForm = !isLoggedIn && !isRestoring;
 
   useEffect(() => {

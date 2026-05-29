@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { authHeaders } from "@/lib/student-session-client";
 import type { Application } from "@/types/application";
+import { useTopLoading } from "@/components/TopLoadingProvider";
 
 type Props = {
   application: Application;
@@ -15,6 +16,8 @@ export function LaptopAvailabilityEnrollment({ application, onUpdated }: Props) 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
+
+  useTopLoading(saving);
 
   const submitted = application.hasLaptop === true || application.hasLaptop === false;
 

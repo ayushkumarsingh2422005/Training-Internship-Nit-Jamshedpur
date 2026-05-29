@@ -4,6 +4,7 @@ import { useState } from "react";
 import { GENDER_OPTIONS } from "@/lib/gender";
 import { authHeaders } from "@/lib/student-session-client";
 import type { Application } from "@/types/application";
+import { useTopLoading } from "@/components/TopLoadingProvider";
 
 type Props = {
   application: Application;
@@ -17,6 +18,8 @@ export function AccommodationEnrollment({ application, onUpdated }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
+
+  useTopLoading(saving);
 
   const enrolled = application.wantsAccommodation !== null && application.wantsAccommodation !== undefined;
   const needsGender = choice === true;

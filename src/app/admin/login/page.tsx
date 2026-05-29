@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
+import { useTopLoading } from "@/components/TopLoadingProvider";
 
 function AdminLoginForm() {
   const router = useRouter();
@@ -10,6 +11,8 @@ function AdminLoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useTopLoading(loading);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();

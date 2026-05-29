@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AdminApplication } from "@/lib/admin-application";
 import type { NoticeCategory } from "@/lib/notices";
+import { useTopLoading } from "@/components/TopLoadingProvider";
 
 type AppliedFilters = {
   q: string;
@@ -120,6 +121,10 @@ export function AdminDashboard() {
   const [selectedCategoryOption, setSelectedCategoryOption] = useState<string>(DEFAULT_NOTICE_FORM.category);
   const [customCategory, setCustomCategory] = useState("");
   const [activeSection, setActiveSection] = useState<"applications" | "notices">("applications");
+
+  useTopLoading(
+    loading || noticeLoading || noticeSaving || deletingApplicationId !== null,
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
