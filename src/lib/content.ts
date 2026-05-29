@@ -6,6 +6,12 @@ export const site = {
   dhteContact: "dhte.jharkhand@gov.in",
 } as const;
 
+export const siteLinks = {
+  nitOfficial: "https://www.nitjsr.ac.in",
+  digicraft: "https://digicraft.one",
+  digicraftLogo: "https://data.digicraft.one/Logo/Main.png",
+} as const;
+
 export const programOverview = {
   summary:
     "Under a formal Memorandum of Understanding between the Department of Higher and Technical Education (DHTE), Government of Jharkhand, and the National Institute of Technology (NIT), Jamshedpur, diploma students from Government Polytechnic and Government Women's Polytechnic institutions across the state receive structured industrial training and internships to bridge classroom learning with real-world technical practice.",

@@ -1,26 +1,28 @@
 import Image from "next/image";
 import Link from "next/link";
+import { DeveloperCredit } from "./DeveloperCredit";
 import { FontSizeControls } from "./FontSizeControls";
 import { SiteNav } from "./SiteNav";
-import { site, studentPortalPath } from "@/lib/content";
+import { site, siteLinks, studentPortalPath } from "@/lib/content";
 
 export function SiteHeader() {
   return (
     <header className="site-header">
       <div className="utility-bar">
         <div className="container utility-inner">
-          <div className="utility-campaigns" aria-hidden="true">
-            Developed By <b> <a href="https://digicraft.one" target="_blank">DigiCraft</a></b>
-            <img src="https://data.digicraft.one/Logo/Main.png" alt="NIT Jamshedpur" width={20} height={20} />
-          </div>
+          <a
+            href={siteLinks.nitOfficial}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="utility-nit-link"
+          >
+            NIT Jamshedpur Portal
+          </a>
+
           <div className="utility-access">
+            <DeveloperCredit className="utility-developer-credit" logoSize={20} />
+            <span className="utility-divider" aria-hidden="true" />
             <FontSizeControls />
-            <span className="utility-skip">
-              <span className="utility-divider" aria-hidden="true" />
-              <a href="#main-content">Skip to main content</a>
-              <span className="utility-divider" aria-hidden="true" />
-              <a href="#main-content">Screen reader access</a>
-            </span>
           </div>
         </div>
       </div>
@@ -60,7 +62,7 @@ export function SiteHeader() {
         </div>
 
         <div className="container emblem-float-wrap">
-          <Link href="/" className="brand-emblem-overlap" aria-label="Home — Government of Jharkhand">
+          <Link href="/" className="brand-emblem-overlap" aria-label="Home — NIT Jamshedpur Internship Portal">
             <span className="emblem-ring">
               <Image
                 src="/nitjsrlogo.png"
