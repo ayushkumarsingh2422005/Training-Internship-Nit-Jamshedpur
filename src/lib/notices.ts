@@ -31,6 +31,16 @@ export type AdminNotice = PublicNotice & {
   legacyId: string | null;
 };
 
+export const NOTICES_PAGE_SIZE = 10;
+
+export type PublishedNoticesPage = {
+  items: PublicNotice[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
 function toIsoDate(value: Date | string): string {
   return new Date(value).toISOString().slice(0, 10);
 }
@@ -63,6 +73,49 @@ export async function getPublishedNotices(limit?: number): Promise<PublicNotice[
   }
   const docs = await query.lean();
   return docs.map((doc) => toPublicNotice(doc as NoticeDocument));
+}
+
+export async function getPublishedNoticesPage(
+  page = 1,
+  limit = NOTICES_PAGE_SIZE,
+): Promise<PublishedNoticesPage> {
+  await connectDB();
+
+  const safeLimit = Math.min(Math.max(limit, 1), 50);
+  const total = await NoticeModel.countDocuments({ isPublished: true });
+  const totalPages = Math.max(1, Math.ceil(total / safeLimit));
+  const safePage = Math.min(Math.max(page, 1), totalPages);
+  const skip = (safePage - 1) * safeLimit;
+
+  const docs = await NoticeModel.find({ isPublished: true })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(safeLimit)
+    .lean();
+
+  return {
+    items: docs.map((doc) => toPublicNotice(doc as NoticeDocument)),
+    total,
+    page: safePage,
+    limit: safeLimit,
+    totalPages,
+  };
+}
+
+export function paginateNotices(items: PublicNotice[], page = 1, limit = NOTICES_PAGE_SIZE): PublishedNoticesPage {
+  const safeLimit = Math.min(Math.max(limit, 1), 50);
+  const total = items.length;
+  const totalPages = Math.max(1, Math.ceil(total / safeLimit));
+  const safePage = Math.min(Math.max(page, 1), totalPages);
+  const start = (safePage - 1) * safeLimit;
+
+  return {
+    items: items.slice(start, start + safeLimit),
+    total,
+    page: safePage,
+    limit: safeLimit,
+    totalPages,
+  };
 }
 
 export function normalizeNoticeSeed(source: ContentNotice) {

@@ -1,26 +1,39 @@
 import type { Metadata } from "next";
+import { NoticesPagination } from "@/components/NoticesPagination";
 import { formatDate, notices as fallbackNotices } from "@/lib/content";
-import { getPublishedNotices } from "@/lib/notices";
+import { getPublishedNoticesPage, paginateNotices, type PublicNotice } from "@/lib/notices";
 
 export const metadata: Metadata = {
   title: "Notices",
 };
 
-// Always read latest notices from DB in production (avoid build-time static cache).
 export const dynamic = "force-dynamic";
 
-export default async function NoticesPage() {
-  const notices = await getPublishedNotices().catch(() =>
-    fallbackNotices.map((item) => ({
-      id: item.id,
-      title: item.title,
-      date: item.date,
-      category: item.category,
-      excerpt: item.excerpt,
-      body: item.body,
-      isNew: Boolean(item.isNew),
-    })),
+type PageProps = {
+  searchParams: Promise<{ page?: string }>;
+};
+
+function fallbackNoticesList(): PublicNotice[] {
+  return fallbackNotices.map((item) => ({
+    id: item.id,
+    title: item.title,
+    date: item.date,
+    category: item.category,
+    excerpt: item.excerpt,
+    body: item.body,
+    isNew: Boolean(item.isNew),
+  }));
+}
+
+export default async function NoticesPage({ searchParams }: PageProps) {
+  const { page: pageParam } = await searchParams;
+  const requestedPage = Math.max(Number(pageParam ?? 1) || 1, 1);
+
+  const result = await getPublishedNoticesPage(requestedPage).catch(() =>
+    paginateNotices(fallbackNoticesList(), requestedPage),
   );
+
+  const { items: notices, page, totalPages, total } = result;
 
   return (
     <main className="page-main">
@@ -33,20 +46,28 @@ export default async function NoticesPage() {
           </p>
         </header>
 
-        <div className="notice-board">
-          {notices.map((notice) => (
-            <article key={notice.id} id={notice.id} className="notice-card">
-              <div className="notice-card-head">
-                <span className={`category-tag cat-${notice.category.toLowerCase()}`}>{notice.category}</span>
-                <time dateTime={notice.date}>{formatDate(notice.date)}</time>
-                {notice.isNew ? <span className="badge-new">New</span> : null}
-              </div>
-              <h2>{notice.title}</h2>
-              <p className="notice-excerpt">{notice.excerpt}</p>
-              <div className="notice-body">{notice.body}</div>
-            </article>
-          ))}
-        </div>
+        {notices.length === 0 ? (
+          <p className="page-lead">No notices published yet.</p>
+        ) : (
+          <>
+            <div className="notice-board">
+              {notices.map((notice) => (
+                <article key={notice.id} id={notice.id} className="notice-card">
+                  <div className="notice-card-head">
+                    <span className={`category-tag cat-${notice.category.toLowerCase()}`}>{notice.category}</span>
+                    <time dateTime={notice.date}>{formatDate(notice.date)}</time>
+                    {notice.isNew ? <span className="badge-new">New</span> : null}
+                  </div>
+                  <h2>{notice.title}</h2>
+                  <p className="notice-excerpt">{notice.excerpt}</p>
+                  <div className="notice-body">{notice.body}</div>
+                </article>
+              ))}
+            </div>
+
+            <NoticesPagination page={page} totalPages={totalPages} total={total} />
+          </>
+        )}
       </div>
     </main>
   );
