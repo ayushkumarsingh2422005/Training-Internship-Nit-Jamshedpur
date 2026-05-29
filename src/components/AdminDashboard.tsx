@@ -8,6 +8,7 @@ import { useTopLoading } from "@/components/TopLoadingProvider";
 
 type AppliedFilters = {
   q: string;
+  college: string;
   subject: string;
   subpart: string;
   accommodation: string;
@@ -94,6 +95,7 @@ function laptopLabel(app: AdminApplication): string {
 export function AdminDashboard() {
   const router = useRouter();
   const [q, setQ] = useState("");
+  const [college, setCollege] = useState("");
   const [subject, setSubject] = useState("");
   const [subpart, setSubpart] = useState("");
   const [accommodation, setAccommodation] = useState("");
@@ -102,12 +104,14 @@ export function AdminDashboard() {
   const [page, setPage] = useState(1);
   const [applied, setApplied] = useState<AppliedFilters>({
     q: "",
+    college: "",
     subject: "",
     subpart: "",
     accommodation: "",
     laptop: "",
     gender: "",
   });
+  const [csvExporting, setCsvExporting] = useState(false);
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +127,7 @@ export function AdminDashboard() {
   const [activeSection, setActiveSection] = useState<"applications" | "notices">("applications");
 
   useTopLoading(
-    loading || noticeLoading || noticeSaving || deletingApplicationId !== null,
+    loading || noticeLoading || noticeSaving || deletingApplicationId !== null || csvExporting,
   );
 
   const load = useCallback(async () => {
@@ -132,6 +136,7 @@ export function AdminDashboard() {
 
     const params = new URLSearchParams();
     if (applied.q) params.set("q", applied.q);
+    if (applied.college) params.set("college", applied.college);
     if (applied.subject) params.set("subject", applied.subject);
     if (applied.subpart) params.set("subpart", applied.subpart);
     if (applied.accommodation) params.set("accommodation", applied.accommodation);
@@ -192,18 +197,76 @@ export function AdminDashboard() {
   function handleSearch(event: React.FormEvent) {
     event.preventDefault();
     setPage(1);
-    setApplied({ q, subject, subpart, accommodation, laptop, gender });
+    setApplied({ q, college, subject, subpart, accommodation, laptop, gender });
   }
 
   function clearFilters() {
     setQ("");
+    setCollege("");
     setSubject("");
     setSubpart("");
     setAccommodation("");
     setLaptop("");
     setGender("");
     setPage(1);
-    setApplied({ q: "", subject: "", subpart: "", accommodation: "", laptop: "", gender: "" });
+    setApplied({
+      q: "",
+      college: "",
+      subject: "",
+      subpart: "",
+      accommodation: "",
+      laptop: "",
+      gender: "",
+    });
+  }
+
+  async function downloadCsv() {
+    setCsvExporting(true);
+    setError(null);
+
+    const params = new URLSearchParams();
+    if (applied.q) params.set("q", applied.q);
+    if (applied.college) params.set("college", applied.college);
+    if (applied.subject) params.set("subject", applied.subject);
+    if (applied.subpart) params.set("subpart", applied.subpart);
+    if (applied.accommodation) params.set("accommodation", applied.accommodation);
+    if (applied.laptop) params.set("laptop", applied.laptop);
+    if (applied.gender) params.set("gender", applied.gender);
+    params.set("export", "csv");
+
+    try {
+      const response = await fetch(`/api/admin/applications?${params.toString()}`);
+      if (response.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
+      if (!response.ok) {
+        let message = "Failed to export CSV.";
+        try {
+          const json = (await response.json()) as { error?: string };
+          message = json.error ?? message;
+        } catch {
+          // non-JSON error body
+        }
+        setError(message);
+        return;
+      }
+
+      const blob = await response.blob();
+      const disposition = response.headers.get("Content-Disposition");
+      const match = disposition?.match(/filename="([^"]+)"/);
+      const filename = match?.[1] ?? `students-${new Date().toISOString().slice(0, 10)}.csv`;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("Network error while exporting CSV.");
+    } finally {
+      setCsvExporting(false);
+    }
   }
 
   async function handleLogout() {
@@ -398,9 +461,19 @@ export function AdminDashboard() {
             <input
               id="admin-q"
               type="search"
-              placeholder="Name, email, phone, college…"
+              placeholder="Name, email, phone, school…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+          <div className="form-field admin-filter-search">
+            <label htmlFor="admin-college">College</label>
+            <input
+              id="admin-college"
+              type="search"
+              placeholder="College name only"
+              value={college}
+              onChange={(e) => setCollege(e.target.value)}
             />
           </div>
           <div className="form-field">
@@ -463,6 +536,14 @@ export function AdminDashboard() {
           </button>
           <button type="button" className="btn btn-secondary btn-sm" onClick={clearFilters}>
             Clear
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            disabled={csvExporting || loading || !data?.total}
+            onClick={() => void downloadCsv()}
+          >
+            {csvExporting ? "Preparing CSV…" : `Download CSV (${data?.total ?? 0})`}
           </button>
         </div>
       </form> : null}
