@@ -28,6 +28,13 @@ export function toAdminApplication(doc: AdminDoc): AdminApplication {
     if (!Number.isNaN(date.getTime())) laptopUpdatedAt = date.toISOString();
   }
 
+  const profileAt = doc.profileCorrectedAt;
+  let profileCorrectedAt: string | null = null;
+  if (profileAt != null && profileAt !== "") {
+    const date = profileAt instanceof Date ? profileAt : new Date(String(profileAt));
+    if (!Number.isNaN(date.getTime())) profileCorrectedAt = date.toISOString();
+  }
+
   let createdAt: string | null = null;
   let updatedAt: string | null = null;
   const created = doc.createdAt;
@@ -58,6 +65,9 @@ export function toAdminApplication(doc: AdminDoc): AdminApplication {
         : null,
     accommodationEnrolledAt,
     gender: doc.gender?.trim() || null,
+    aadharNumber: doc.aadharNumber?.trim() || null,
+    collegeRegistrationNumber: doc.collegeRegistrationNumber?.trim() || null,
+    profileCorrectedAt,
     hasLaptop: doc.hasLaptop === true || doc.hasLaptop === false ? doc.hasLaptop : null,
     laptopUpdatedAt,
     createdAt,

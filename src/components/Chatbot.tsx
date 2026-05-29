@@ -11,7 +11,7 @@ import {
   formatShortlistSuccess,
 } from "@/lib/format-shortlist-chat";
 import type { Gender } from "@/lib/gender";
-import { site } from "@/lib/content";
+import { site, studentPortalPath } from "@/lib/content";
 import {
   authHeaders,
   clearStudentSession,
@@ -68,7 +68,7 @@ function afterShortlistButtons(app: Application): ChatButton[] {
   }
 
   buttons.push(
-    { id: "sl-full", label: "Open Results page", href: "/results#check-shortlist" },
+    { id: "sl-full", label: "Open Login & Profile", href: `${studentPortalPath}#check-shortlist` },
     { id: "sl-logout", label: "Log out", action: "shortlist_logout" },
     { id: "sl-again", label: "Check another student", action: "shortlist_check" },
     { id: "sl-menu", label: "Main menu", nextNodeId: "menu" },

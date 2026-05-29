@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AdminApplication } from "@/lib/admin-application";
 import type { NoticeCategory } from "@/lib/notices";
+import { AdminAttendance } from "@/components/AdminAttendance";
 import { useTopLoading } from "@/components/TopLoadingProvider";
 
 type AppliedFilters = {
@@ -124,7 +125,7 @@ export function AdminDashboard() {
   const [noticeForm, setNoticeForm] = useState<NoticeForm>(DEFAULT_NOTICE_FORM);
   const [selectedCategoryOption, setSelectedCategoryOption] = useState<string>(DEFAULT_NOTICE_FORM.category);
   const [customCategory, setCustomCategory] = useState("");
-  const [activeSection, setActiveSection] = useState<"applications" | "notices">("applications");
+  const [activeSection, setActiveSection] = useState<"applications" | "notices" | "attendance">("applications");
 
   useTopLoading(
     loading || noticeLoading || noticeSaving || deletingApplicationId !== null || csvExporting,
@@ -419,6 +420,13 @@ export function AdminDashboard() {
         >
           Notices
         </button>
+        <button
+          type="button"
+          className={`btn btn-sm ${activeSection === "attendance" ? "btn-green" : "btn-secondary"}`}
+          onClick={() => setActiveSection("attendance")}
+        >
+          Attendance
+        </button>
       </div>
 
       {activeSection === "applications" && data ? (
@@ -618,6 +626,18 @@ export function AdminDashboard() {
                             <div>
                               <dt>Father / guardian</dt>
                               <dd>{app.fatherName}</dd>
+                            </div>
+                            <div>
+                              <dt>College registration no.</dt>
+                              <dd>{app.collegeRegistrationNumber || "—"}</dd>
+                            </div>
+                            <div>
+                              <dt>Aadhaar</dt>
+                              <dd>{app.aadharNumber || "—"}</dd>
+                            </div>
+                            <div>
+                              <dt>Gender</dt>
+                              <dd>{app.gender || "—"}</dd>
                             </div>
                             <div>
                               <dt>School</dt>
@@ -849,6 +869,8 @@ export function AdminDashboard() {
           </div>
         </section>
       ) : null}
+
+      {activeSection === "attendance" ? <AdminAttendance /> : null}
     </div>
   );
 }

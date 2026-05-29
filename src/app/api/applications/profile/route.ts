@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { toApplicationResponse } from "@/lib/application-response";
+import {
+  COLLEGE_OTHER,
+  isValidCollegeSelection,
+  resolveCollegeName,
+} from "@/lib/government-colleges";
+import { isValidGender } from "@/lib/gender";
 import connectDB from "@/lib/mongodb";
+import { isValidAadhar, normalizeAadhar } from "@/lib/profile";
 import { getSessionFromRequest } from "@/lib/student-session";
 import Application from "@/models/Application";
 
@@ -8,8 +15,14 @@ type ProfilePayload = {
   fullName?: string;
   fatherName?: string;
   schoolName?: string;
-  collegeName?: string;
+  /** Dropdown choice — used to set collegeName on save. */
+  collegeDropdown?: string;
+  /** Custom college name when collegeDropdown is Other. */
+  otherCollegeName?: string;
   address?: string;
+  gender?: string;
+  aadharNumber?: string;
+  collegeRegistrationNumber?: string;
 };
 
 function clean(value: unknown): string {
@@ -27,11 +40,39 @@ export async function PATCH(request: Request) {
     const fullName = clean(body.fullName);
     const fatherName = clean(body.fatherName);
     const schoolName = clean(body.schoolName);
-    const collegeName = clean(body.collegeName);
     const address = clean(body.address);
+    const collegeDropdown = clean(body.collegeDropdown);
+    const otherCollegeName = clean(body.otherCollegeName);
+    const gender = clean(body.gender);
+    const aadharNumber = normalizeAadhar(clean(body.aadharNumber));
+    const collegeRegistrationNumber = clean(body.collegeRegistrationNumber);
 
-    if (!fullName || !fatherName || !schoolName || !collegeName || !address) {
-      return NextResponse.json({ error: "All basic profile fields are required." }, { status: 400 });
+    if (!fullName || !fatherName || !schoolName || !address) {
+      return NextResponse.json({ error: "Name, guardian, school, and address are required." }, { status: 400 });
+    }
+
+    if (!isValidCollegeSelection(collegeDropdown)) {
+      return NextResponse.json({ error: "Please select your government polytechnic from the list." }, { status: 400 });
+    }
+
+    const collegeName = resolveCollegeName(collegeDropdown, otherCollegeName);
+    if (!collegeName) {
+      return NextResponse.json(
+        { error: "Please enter your college name when selecting Other." },
+        { status: 400 },
+      );
+    }
+
+    if (!isValidGender(gender)) {
+      return NextResponse.json({ error: "Please select your gender." }, { status: 400 });
+    }
+
+    if (!isValidAadhar(aadharNumber)) {
+      return NextResponse.json({ error: "Please enter a valid 12-digit Aadhaar number." }, { status: 400 });
+    }
+
+    if (!collegeRegistrationNumber) {
+      return NextResponse.json({ error: "College registration number is required." }, { status: 400 });
     }
 
     await connectDB();
@@ -45,6 +86,10 @@ export async function PATCH(request: Request) {
           schoolName,
           collegeName,
           address,
+          gender,
+          aadharNumber,
+          collegeRegistrationNumber,
+          profileCorrectedAt: new Date(),
         },
       },
       { new: true },

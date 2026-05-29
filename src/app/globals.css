@@ -550,6 +550,15 @@ img {
   color: #fff;
 }
 
+.btn-red {
+  background: #c62828;
+  color: #fff;
+}
+
+.btn-red:hover:not(:disabled) {
+  background: #b71c1c;
+}
+
 .btn-yellow {
   background: var(--yellow);
   color: #1a1a1a;
@@ -1599,7 +1608,7 @@ img {
 
 .shortlist-form.compact-form {
   max-width: none;
-  gap: 12px;
+  gap: 8px;
 }
 
 .shortlist-form-row {
@@ -1632,13 +1641,52 @@ img {
   background: #fff;
 }
 
+.form-field select,
+.form-field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  color: var(--text);
+  background: #fff;
+}
+
+.form-field select {
+  padding-right: 36px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 12px 8px;
+}
+
+.form-field textarea {
+  resize: vertical;
+  min-height: 88px;
+}
+
 .form-field input:focus {
   outline: 2px solid var(--green);
   outline-offset: 1px;
   border-color: var(--green);
 }
 
+.form-field select:focus,
+.form-field textarea:focus {
+  outline: 2px solid var(--green);
+  outline-offset: 1px;
+  border-color: var(--green);
+}
+
 .form-field input:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.form-field select:disabled,
+.form-field textarea:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
@@ -1834,7 +1882,7 @@ img {
 
 /* Accommodation enrollment */
 .accommodation-block {
-  padding: 14px 16px;
+  padding: 12px 14px;
   background: #f7faf7;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -1847,8 +1895,8 @@ img {
 }
 
 .accommodation-lead {
-  margin: 0 0 12px;
-  font-size: 0.85rem;
+  margin: 0 0 8px;
+  font-size: 0.84rem;
   color: var(--muted);
   line-height: 1.4;
 }
@@ -1891,16 +1939,72 @@ img {
   margin-top: 4px;
 }
 
+.accommodation-block .shortlist-form {
+  max-width: none;
+  gap: 8px;
+}
+
+.accommodation-block .shortlist-form-row,
+.shortlist-form.compact-form .shortlist-form-row {
+  gap: 8px;
+}
+
+.accommodation-block .form-field label,
+.shortlist-form.compact-form .form-field label {
+  margin-bottom: 4px;
+  font-size: 0.85rem;
+}
+
+.accommodation-block .form-field input,
+.accommodation-block .form-field select,
+.accommodation-block .form-field textarea,
+.shortlist-form.compact-form .form-field input,
+.shortlist-form.compact-form .form-field select {
+  padding: 8px 10px;
+  font-size: 0.88rem;
+  border-radius: 6px;
+}
+
+.accommodation-block .form-field select,
+.shortlist-form.compact-form .form-field select {
+  padding-right: 30px;
+  background-position: right 10px center;
+}
+
+.accommodation-notice {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.accommodation-notice-warning {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  color: #5d4037;
+}
+
+.accommodation-notice-info {
+  background: #fff;
+  border: 1px dashed var(--border);
+  color: var(--text);
+}
+
+.accommodation-notice-info strong {
+  color: var(--green-dark);
+}
+
 .accommodation-gender-fieldset {
   margin: 0;
-  padding: 12px;
+  padding: 8px 10px;
   border: 1px dashed var(--border);
-  border-radius: 8px;
+  border-radius: 6px;
   background: #fff;
 }
 
 .accommodation-gender-fieldset legend {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--green-dark);
   padding: 0 4px;
@@ -1909,26 +2013,26 @@ img {
 .accommodation-gender-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 6px;
+  margin-top: 4px;
 }
 
 .accommodation-option-compact {
   flex: 1;
-  min-width: 88px;
-  padding: 8px 10px;
+  min-width: 72px;
+  padding: 6px 8px;
 }
 
 .accommodation-option {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 8px;
+  padding: 8px 10px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 6px;
   background: #fff;
   cursor: pointer;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   transition: border-color 0.15s, background 0.15s;
 }
 
@@ -2669,4 +2773,428 @@ img {
 .admin-muted {
   font-size: 0.8rem;
   color: #666;
+}
+
+/* Admin attendance */
+.admin-attendance-lead {
+  margin: 0 0 14px;
+  color: #555;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.admin-attendance-setup {
+  margin-bottom: 16px;
+}
+
+.admin-attendance-auto-loading {
+  margin: 8px 0 0;
+  font-size: 0.84rem;
+  color: #666;
+}
+
+.admin-attendance-auto-ready {
+  color: var(--green-dark);
+  font-weight: 600;
+}
+
+.admin-attendance-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.admin-attendance-pill {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #eef5ef;
+  color: var(--green-dark);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.admin-attendance-pill-saved {
+  background: #e3f2fd;
+  color: #0d47a1;
+}
+
+.admin-attendance-pill-new {
+  background: #fff8e1;
+  color: #5d4037;
+}
+
+.admin-attendance-topic {
+  margin-bottom: 12px;
+}
+
+.admin-attendance-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.admin-attendance-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.88rem;
+  color: #444;
+  font-weight: 600;
+}
+
+.admin-attendance-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-attendance-status-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-attendance-table td:last-child {
+  min-width: 170px;
+}
+
+.admin-attendance-row-present td {
+  background: #f3faf4;
+}
+
+.admin-attendance-row-absent td {
+  background: #fff5f5;
+}
+
+.admin-attendance-row-present:hover td {
+  background: #e8f5e9;
+}
+
+.admin-attendance-row-absent:hover td {
+  background: #ffebee;
+}
+
+.admin-attendance-save-actions {
+  margin-top: 14px;
+  gap: 8px;
+}
+
+.admin-attendance-saved {
+  margin-top: 12px;
+  color: var(--green-dark);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* Student attendance */
+.student-attendance-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 720px) {
+  .student-attendance-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+.student-attendance-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.student-attendance-stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--green-dark);
+}
+
+.student-attendance-stat-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.student-attendance-stat-sub {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.student-attendance-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.student-attendance-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.student-attendance-table th,
+.student-attendance-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+  vertical-align: top;
+}
+
+.student-attendance-table th {
+  background: #f8faf9;
+  color: var(--green-dark);
+  font-weight: 600;
+}
+
+.student-attendance-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.student-attendance-badge-present {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.student-attendance-badge-absent {
+  background: #ffebee;
+  color: #b71c1c;
+}
+
+.student-attendance-calendar {
+  margin-top: 4px;
+}
+
+.student-attendance-cal-header {
+  margin-bottom: 10px;
+}
+
+.student-attendance-cal-header .accommodation-title {
+  margin-bottom: 2px;
+}
+
+.student-attendance-cal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.student-attendance-cal-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.student-attendance-cal-months {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .student-attendance-cal-months {
+    grid-template-columns: 1fr;
+  }
+}
+
+.student-attendance-cal-month {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  padding: 10px;
+}
+
+.student-attendance-cal-month-title {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: var(--green-dark);
+  text-align: center;
+}
+
+.student-attendance-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.student-attendance-cal-weekday {
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.student-attendance-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.student-attendance-cal-day {
+  position: relative;
+  min-height: 44px;
+  padding: 4px;
+  border-radius: 6px;
+  border: 1px solid #eee;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.student-attendance-cal-day:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 1px;
+  z-index: 2;
+}
+
+.student-attendance-cal-day:hover,
+.student-attendance-cal-day:focus-visible {
+  z-index: 3;
+}
+
+.student-attendance-cal-day-padding {
+  border-color: transparent;
+  background: transparent;
+}
+
+.student-attendance-cal-day-outside {
+  opacity: 0.35;
+}
+
+.student-attendance-cal-day-empty {
+  background: #fff;
+}
+
+.student-attendance-cal-day-present {
+  background: #e8f5e9;
+  border-color: #a5d6a7;
+}
+
+.student-attendance-cal-day-absent {
+  background: #ffebee;
+  border-color: #ef9a9a;
+}
+
+.student-attendance-cal-day-num {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #444;
+  line-height: 1;
+}
+
+.student-attendance-cal-markers {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+}
+
+.student-attendance-cal-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.student-attendance-cal-marker-present {
+  background: #2e7d32;
+  color: #fff;
+}
+
+.student-attendance-cal-marker-absent {
+  background: #c62828;
+  color: #fff;
+}
+
+.student-attendance-cal-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  min-width: 160px;
+  max-width: 220px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #1b1b1b;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+  z-index: 20;
+  text-align: left;
+}
+
+.student-attendance-cal-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #1b1b1b;
+}
+
+.student-attendance-cal-day:hover .student-attendance-cal-tooltip,
+.student-attendance-cal-day:focus-visible .student-attendance-cal-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.student-attendance-cal-tooltip-row + .student-attendance-cal-tooltip-row {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.student-attendance-cal-tooltip-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #b9f6ca;
+  margin-bottom: 2px;
+}
+
+.student-attendance-cal-tooltip-topic {
+  display: block;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: #f5f5f5;
+  word-break: break-word;
+}
+
+.student-attendance-cal-month {
+  overflow: visible;
+}
+
+.student-attendance-cal-grid {
+  overflow: visible;
 }

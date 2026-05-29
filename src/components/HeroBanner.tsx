@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { programOverview } from "@/lib/content";
+import { programOverview, studentPortalPath } from "@/lib/content";
 import Image from "next/image";
 
 export function HeroBanner() {
@@ -22,7 +22,7 @@ export function HeroBanner() {
             <Link href="/notices" className="btn btn-yellow">
               View Notices
             </Link>
-            <Link href="/results#check-shortlist" className="btn btn-outline">
+            <Link href={`${studentPortalPath}#check-shortlist`} className="btn btn-outline">
               Login &amp; Profile
             </Link>
           </div>

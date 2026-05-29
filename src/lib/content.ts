@@ -181,12 +181,14 @@ export const results: Result[] = [
   },
 ];
 
+export const studentPortalPath = "/student-portal" as const;
+
 export const navLinks = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About the Programme" },
   { href: "/program", label: "Training Modules" },
   { href: "/notices", label: "Notices" },
-  { href: "/results", label: "Login & Profile" },
+  { href: studentPortalPath, label: "Login & Profile" },
   { href: "/contact", label: "Contact" },
 ] as const;
 

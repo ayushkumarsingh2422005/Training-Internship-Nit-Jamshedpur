@@ -11,6 +11,7 @@ import {
   performanceTargets,
   programOverview,
   results,
+  studentPortalPath,
 } from "@/lib/content";
 
 // Always read latest notices from DB in production (avoid build-time static cache).
@@ -116,14 +117,14 @@ export default async function HomePage() {
           <div>
             <div className="section-head">
               <h2>Login &amp; Profile</h2>
-              <Link href="/results#check-shortlist" className="text-link">
+              <Link href={`${studentPortalPath}#check-shortlist`} className="text-link">
                 Open section
               </Link>
             </div>
             <ul className="notice-list compact">
               {results.map((result) => (
                 <li key={result.id}>
-                  <Link href="/results#check-shortlist">
+                  <Link href={`${studentPortalPath}#check-shortlist`}>
                     <span className="notice-date">{formatDate(result.date)}</span>
                     <span className="notice-title">{result.title}</span>
                   </Link>

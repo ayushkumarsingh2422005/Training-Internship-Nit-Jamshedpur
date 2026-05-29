@@ -14,6 +14,9 @@ export type DbApplicationInput = {
   wantsAccommodation?: boolean | null;
   accommodationEnrolledAt?: unknown;
   gender?: string | null;
+  aadharNumber?: string | null;
+  collegeRegistrationNumber?: string | null;
+  profileCorrectedAt?: unknown;
   hasLaptop?: boolean | null;
   laptopUpdatedAt?: unknown;
 };
@@ -37,6 +40,15 @@ export function toApplicationResponse(doc: DbApplicationInput): Application {
     }
   }
 
+  const profileAt = doc.profileCorrectedAt;
+  let profileCorrectedAt: string | null = null;
+  if (profileAt != null && profileAt !== "") {
+    const date = profileAt instanceof Date ? profileAt : new Date(String(profileAt));
+    if (!Number.isNaN(date.getTime())) {
+      profileCorrectedAt = date.toISOString();
+    }
+  }
+
   return {
     fullName: doc.fullName,
     fatherName: doc.fatherName,
@@ -53,6 +65,9 @@ export function toApplicationResponse(doc: DbApplicationInput): Application {
         : null,
     accommodationEnrolledAt,
     gender: doc.gender?.trim() || null,
+    aadharNumber: doc.aadharNumber?.trim() || null,
+    collegeRegistrationNumber: doc.collegeRegistrationNumber?.trim() || null,
+    profileCorrectedAt,
     hasLaptop: doc.hasLaptop === true || doc.hasLaptop === false ? doc.hasLaptop : null,
     laptopUpdatedAt,
   };

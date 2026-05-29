@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FontSizeControls } from "./FontSizeControls";
 import { SiteNav } from "./SiteNav";
-import { site } from "@/lib/content";
+import { site, studentPortalPath } from "@/lib/content";
 
 export function SiteHeader() {
   return (
@@ -52,7 +52,7 @@ export function SiteHeader() {
               <Link href="/notices" className="btn-pill btn-pill-blue">
                 Notices
               </Link>
-              <Link href="/results#check-shortlist" className="btn-pill btn-pill-green">
+              <Link href={`${studentPortalPath}#check-shortlist`} className="btn-pill btn-pill-green">
                 Login & Profile
               </Link>
             </div>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AccommodationEnrollment } from "@/components/AccommodationEnrollment";
 import { LaptopAvailabilityEnrollment } from "@/components/LaptopAvailabilityEnrollment";
+import { StudentAttendancePanel } from "@/components/StudentAttendancePanel";
 import { StudentProfileEditor } from "@/components/StudentProfileEditor";
 import {
   authHeaders,
@@ -11,6 +12,7 @@ import {
   saveStudentSession,
 } from "@/lib/student-session-client";
 import type { Application } from "@/types/application";
+import { isProfileComplete } from "@/lib/profile";
 import { useTopLoading } from "@/components/TopLoadingProvider";
 
 type LookupState =
@@ -123,6 +125,10 @@ export function ShortlistLookup() {
 
   useEffect(() => {
     if (state.status !== "shortlisted") return;
+    if (!isProfileComplete(state.application)) {
+      setActiveTab("info");
+      return;
+    }
     if (state.application.wantsAccommodation == null) {
       setActiveTab("hostel");
       return;
@@ -239,6 +245,9 @@ export function ShortlistLookup() {
                 onClick={() => setActiveTab("info")}
               >
                 Profile Info
+                {!isProfileComplete(state.application) ? (
+                  <span className="profile-tab-badge pending">Pending</span>
+                ) : null}
               </button>
               <button
                 type="button"
@@ -293,15 +302,7 @@ export function ShortlistLookup() {
                 <LaptopAvailabilityEnrollment application={state.application} onUpdated={updateApplication} />
               ) : null}
 
-              {activeTab === "attendance" ? (
-                <div className="profile-result-placeholder">
-                  <h4>Attendance details will be available here</h4>
-                  <p>
-                    This tab is reserved for attendance tracking and updates in future. Your current shortlist status is
-                    shown above.
-                  </p>
-                </div>
-              ) : null}
+              {activeTab === "attendance" ? <StudentAttendancePanel /> : null}
 
               {activeTab === "certificate" ? (
                 <div className="profile-result-placeholder">

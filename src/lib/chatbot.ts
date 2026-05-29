@@ -7,6 +7,7 @@ import {
   programOverview,
   results,
   site,
+  studentPortalPath,
   trainingCourses,
   trainingMethodology,
 } from "./content";
@@ -207,7 +208,7 @@ export const chatNodes: Record<string, ChatNode> = {
         { id: "ass-shortlist", label: "Check my shortlist", action: "shortlist_check" },
         { id: "ass-results", label: "Batch announcements", nextNodeId: "results" },
         { id: "ass-notice", label: "Assessment notice", nextNodeId: "notice_n4" },
-        { id: "ass-page", label: "Open Results page", href: "/results#check-shortlist" },
+        { id: "ass-page", label: "Open Login & Profile", href: `${studentPortalPath}#check-shortlist` },
       ],
       "menu",
     ),
@@ -282,7 +283,7 @@ export const chatNodes: Record<string, ChatNode> = {
     buttons: withMenu(
       [
         { id: "results-shortlist", label: "Check my shortlist", action: "shortlist_check" },
-        { id: "results-page", label: "Open Results page", href: "/results#check-shortlist" },
+        { id: "results-page", label: "Open Login & Profile", href: `${studentPortalPath}#check-shortlist` },
       ],
       "menu",
     ),

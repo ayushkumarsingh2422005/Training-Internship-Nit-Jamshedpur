@@ -12,6 +12,9 @@ export type Application = {
   wantsAccommodation?: boolean | null;
   accommodationEnrolledAt?: string | null;
   gender?: string | null;
+  aadharNumber?: string | null;
+  collegeRegistrationNumber?: string | null;
+  profileCorrectedAt?: string | null;
   hasLaptop?: boolean | null;
   laptopUpdatedAt?: string | null;
 };
