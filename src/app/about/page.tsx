@@ -6,10 +6,13 @@ import {
   programOverview,
   trainingMethodology,
 } from "@/lib/content";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "About the Programme",
-};
+  description: `${programOverview.summary} Learn about training methodology, fees, attendance policy, and certification at NIT Jamshedpur under DHTE Jharkhand.`,
+  path: "/about",
+});
 
 export default function AboutPage() {
   return (

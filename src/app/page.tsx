@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { HeroBanner } from "@/components/HeroBanner";
@@ -11,8 +12,17 @@ import {
   performanceTargets,
   programOverview,
   results,
+  site,
   studentPortalPath,
 } from "@/lib/content";
+import { createPageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = createPageMetadata({
+  title: `${site.title} | NIT Jamshedpur × DHTE Jharkhand`,
+  description: programOverview.summary,
+  path: "/",
+  absoluteTitle: true,
+});
 
 // Always read latest notices from DB in production (avoid build-time static cache).
 export const dynamic = "force-dynamic";

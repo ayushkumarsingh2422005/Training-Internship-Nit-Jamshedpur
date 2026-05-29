@@ -2,10 +2,14 @@ import type { Metadata } from "next";
 import { NoticesPagination } from "@/components/NoticesPagination";
 import { formatDate, notices as fallbackNotices } from "@/lib/content";
 import { getPublishedNoticesPage, paginateNotices, type PublicNotice } from "@/lib/notices";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Notices",
-};
+export const metadata: Metadata = createPageMetadata({
+  title: "Notices & Announcements",
+  description:
+    "Official notices on NIT Jamshedpur industrial training — schedules, hostel, fees, assessments, and announcements for DHTE Jharkhand polytechnic students.",
+  path: "/notices",
+});
 
 export const dynamic = "force-dynamic";
 

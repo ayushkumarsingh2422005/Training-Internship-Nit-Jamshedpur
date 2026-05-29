@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 import { trainingCourses } from "@/lib/content";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Training Modules",
-};
+  description:
+    "Explore industrial training and skill-development modules at NIT Jamshedpur — Computer Science, Mechanical, Electrical, and Civil Engineering courses for Jharkhand polytechnic students.",
+  path: "/program",
+});
 
 export default function ProgramPage() {
   return (

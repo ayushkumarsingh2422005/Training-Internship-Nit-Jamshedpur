@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
-import { programOverview, site } from "@/lib/content";
+import { site } from "@/lib/content";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Contact",
-};
+export const metadata: Metadata = createPageMetadata({
+  title: "Contact & Support",
+  description: `Contact NIT Jamshedpur internship coordination (${site.nitContact}) or DHTE Jharkhand (${site.dhteContact}) for programme queries, reporting, and support.`,
+  path: "/contact",
+});
 
 export default function ContactPage() {
   return (
