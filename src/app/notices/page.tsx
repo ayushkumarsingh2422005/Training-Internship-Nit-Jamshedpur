@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   title: "Notices",
 };
 
+// Always read latest notices from DB in production (avoid build-time static cache).
+export const dynamic = "force-dynamic";
+
 export default async function NoticesPage() {
   const notices = await getPublishedNotices().catch(() =>
     fallbackNotices.map((item) => ({

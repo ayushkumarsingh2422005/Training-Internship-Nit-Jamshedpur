@@ -13,6 +13,9 @@ import {
   results,
 } from "@/lib/content";
 
+// Always read latest notices from DB in production (avoid build-time static cache).
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const notices = await getPublishedNotices().catch(() =>
     fallbackNotices.map((item) => ({

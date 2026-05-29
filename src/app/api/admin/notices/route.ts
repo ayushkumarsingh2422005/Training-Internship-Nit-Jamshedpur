@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { type NoticeCategory, toAdminNotice } from "@/lib/notices";
 import { getAdminSessionFromRequest } from "@/lib/admin-session";
+import { revalidatePublicNoticePages } from "@/lib/revalidate-public";
 import connectDB from "@/lib/mongodb";
 import Notice from "@/models/Notice";
+
+export const dynamic = "force-dynamic";
 
 type NoticePayload = {
   id?: string;
@@ -85,6 +88,8 @@ export async function POST(request: Request) {
       isPublished: body.isPublished ?? true,
     });
 
+    revalidatePublicNoticePages();
+
     return NextResponse.json({ item: toAdminNotice(created.toObject()) }, { status: 201 });
   } catch (error) {
     console.error("POST /api/admin/notices", error);
@@ -121,6 +126,8 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Notice not found." }, { status: 404 });
     }
 
+    revalidatePublicNoticePages();
+
     return NextResponse.json({ item: toAdminNotice(updated) });
   } catch (error) {
     console.error("PATCH /api/admin/notices", error);
@@ -144,6 +151,8 @@ export async function DELETE(request: Request) {
     if (!deleted) {
       return NextResponse.json({ error: "Notice not found." }, { status: 404 });
     }
+
+    revalidatePublicNoticePages();
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getPublishedNotices } from "@/lib/notices";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const notices = await getPublishedNotices();
