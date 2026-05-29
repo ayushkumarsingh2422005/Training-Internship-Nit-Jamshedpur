@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { site } from "@/lib/content";
+import { programOverview, site } from "@/lib/content";
 import { createPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = createPageMetadata({
