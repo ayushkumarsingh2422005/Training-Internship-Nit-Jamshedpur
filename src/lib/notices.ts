@@ -57,7 +57,7 @@ export function toAdminNotice(doc: NoticeDocument): AdminNotice {
 
 export async function getPublishedNotices(limit?: number): Promise<PublicNotice[]> {
   await connectDB();
-  const query = NoticeModel.find({ isPublished: true }).sort({ date: -1, updatedAt: -1 });
+  const query = NoticeModel.find({ isPublished: true }).sort({ createdAt: -1 });
   if (typeof limit === "number" && limit > 0) {
     query.limit(limit);
   }

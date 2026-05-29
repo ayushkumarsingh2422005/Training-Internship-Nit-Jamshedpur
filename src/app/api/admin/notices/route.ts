@@ -58,7 +58,7 @@ export async function GET(request: Request) {
     if (unauthorized) return unauthorized;
 
     await connectDB();
-    const docs = await Notice.find().sort({ date: -1, updatedAt: -1 }).lean();
+    const docs = await Notice.find().sort({ createdAt: -1 }).lean();
     return NextResponse.json({ items: docs.map((doc) => toAdminNotice(doc)) });
   } catch (error) {
     console.error("GET /api/admin/notices", error);

@@ -18,7 +18,7 @@ const noticeSchema = new Schema(
   },
 );
 
-noticeSchema.index({ isPublished: 1, date: -1 });
+noticeSchema.index({ isPublished: 1, createdAt: -1 });
 
 export type NoticeDocument = InferSchemaType<typeof noticeSchema> & {
   _id: mongoose.Types.ObjectId;
