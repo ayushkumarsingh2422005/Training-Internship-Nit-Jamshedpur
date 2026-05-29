@@ -2,18 +2,47 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { navLinks } from "@/lib/content";
 
 export function SiteNav() {
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const [navHeight, setNavHeight] = useState(0);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    const nav = navRef.current;
+    if (!sentinel || !nav) return;
+
+    const syncHeight = () => setNavHeight(nav.offsetHeight);
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setPinned(!entry.isIntersecting);
+        syncHeight();
+      },
+      { threshold: 0 },
+    );
+
+    observer.observe(sentinel);
+    syncHeight();
+    window.addEventListener("resize", syncHeight);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", syncHeight);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -77,7 +106,14 @@ export function SiteNav() {
   );
 
   return (
-    <nav className="site-nav" aria-label="Main navigation">
+    <>
+      <div ref={sentinelRef} className="site-nav-sentinel" aria-hidden="true" />
+      {pinned ? <div className="site-nav-placeholder" style={{ height: navHeight }} aria-hidden="true" /> : null}
+      <nav
+        ref={navRef}
+        className={`site-nav${pinned ? " site-nav--pinned" : ""}`}
+        aria-label="Main navigation"
+      >
       <div className="container nav-inner">
         <div className="nav-emblem-spacer" aria-hidden="true" />
 
@@ -112,5 +148,6 @@ export function SiteNav() {
 
       {mounted ? createPortal(drawer, document.body) : null}
     </nav>
+    </>
   );
 }
