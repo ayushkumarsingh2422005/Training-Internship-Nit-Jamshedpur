@@ -142,7 +142,8 @@ export default async function HomePage() {
               ))}
             </ul>
             <p className="muted-note">
-              Log in with registered details to check your shortlist status and profile details.
+              Log in with your registered email and mobile number to check shortlist status, update your profile, and
+              download your application form.
             </p>
           </div>
         </div>

@@ -178,12 +178,12 @@ export const notices: Notice[] = [
 export const results: Result[] = [
   {
     id: "r1",
-    title: "Shortlist announced — check your status",
+    title: "Application form is live — download yours",
     date: "2026-05-26",
     batch: "Industrial Training & Internship 2026",
     description:
-      "Shortlist status is available from 26 May 2026. Use the Login & Profile form below with your registered email and mobile number to view your status and hostel accommodation options.",
-    fileLabel: "Check shortlist below",
+      "Shortlisted students can log in with registered email and mobile number, complete their profile, and download the pre-filled application form from the Application Form tab.",
+    fileLabel: "Open Login & Profile",
   },
 ];
 
