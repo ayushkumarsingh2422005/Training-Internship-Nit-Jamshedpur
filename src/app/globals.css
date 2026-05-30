@@ -3706,10 +3706,10 @@ img {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: calc(var(--ic-mm) * 8);
+  gap: calc(var(--ic-mm) * 7);
   background: #ffffff;
   box-sizing: border-box;
-  padding: calc(var(--ic-mm) * 4);
+  padding: calc(var(--ic-mm) * 2);
   font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;

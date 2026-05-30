@@ -133,6 +133,10 @@ export async function downloadIdCardsPdf(
   const pageHeight = pdf.internal.pageSize.getHeight();
   const assets = await loadIdCardAssets();
 
+  // Stack multiple students per A4 page (front+back row each), top-aligned.
+  const PAGE_MARGIN = 8;
+  const ROW_GAP = 4;
+
   // Reuse a single off-screen host + React root across every card.
   const host = document.createElement("div");
   host.className = "id-card-capture-host id-card-print-root";
@@ -141,12 +145,11 @@ export async function downloadIdCardsPdf(
   document.body.appendChild(host);
   const root = createRoot(host);
 
+  let cursorY = PAGE_MARGIN;
+  let isFirstRowOnPage = true;
+
   try {
     for (let index = 0; index < applications.length; index += 1) {
-      if (index > 0) {
-        pdf.addPage();
-      }
-
       const { canvas, widthMm, heightMm } = await renderSheetCanvas(
         host,
         root,
@@ -154,16 +157,23 @@ export async function downloadIdCardsPdf(
         assets,
       );
 
-      // Top-left placement with a small margin for easy cut-out.
-      const margin = 8;
-      const x = Math.min(margin, Math.max(0, pageWidth - widthMm));
-      const y = Math.min(margin, Math.max(0, pageHeight - heightMm));
+      // Move to a new page when the next row would overflow the sheet.
+      if (!isFirstRowOnPage && cursorY + heightMm > pageHeight - PAGE_MARGIN) {
+        pdf.addPage();
+        cursorY = PAGE_MARGIN;
+        isFirstRowOnPage = true;
+      }
+
+      const x = Math.min(PAGE_MARGIN, Math.max(0, pageWidth - widthMm));
       const imgData = canvas.toDataURL("image/png", 1);
-      pdf.addImage(imgData, "PNG", x, y, widthMm, heightMm, undefined, "FAST");
+      pdf.addImage(imgData, "PNG", x, cursorY, widthMm, heightMm, undefined, "FAST");
+
+      cursorY += heightMm + ROW_GAP;
+      isFirstRowOnPage = false;
 
       onProgress?.({ completed: index + 1, total });
 
-      // Yield to the event loop so the progress UI can repaint between pages.
+      // Yield to the event loop so the progress UI can repaint between rows.
       await new Promise<void>((resolve) => {
         setTimeout(resolve, 0);
       });
