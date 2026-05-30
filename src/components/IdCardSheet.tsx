@@ -164,6 +164,12 @@ export function IdCardSheet({ application, nitLogoUrl, govEmblemUrl, signatureUr
             <DataRow icon="✉" label="Email" value={displayValue(application.email)} />
             <DataRow icon="☎" label="Phone" value={displayValue(application.phoneNumber)} />
           </div>
+
+          <footer className="id-card-front-footer">
+            <div className="id-card-barcode-wrap">
+              <IdCardBarcode value={barcodeValue} compact />
+            </div>
+          </footer>
         </div>
       </article>
 
@@ -207,7 +213,7 @@ export function IdCardSheet({ application, nitLogoUrl, govEmblemUrl, signatureUr
                 <strong>Issue date :</strong> {idCardMeta.issueDate}
               </p>
               <p>
-                <strong>Expire date :</strong> {idCardMeta.expireDate}
+                <strong>Valid till :</strong> {idCardMeta.expireDate}
               </p>
               <p className="id-card-return-notice">{idCardMeta.returnNotice}</p>
             </div>
