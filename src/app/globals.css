@@ -2808,6 +2808,37 @@ img {
   gap: 8px;
 }
 
+.admin-idcard-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  width: 100%;
+}
+
+.admin-idcard-progress-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--green-pale, #e8f5e9);
+  overflow: hidden;
+  border: 1px solid var(--border, #d0d0d0);
+}
+
+.admin-idcard-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1a5c28, #2e7d32);
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+.admin-idcard-progress-text {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1a5c28;
+  white-space: nowrap;
+}
+
 .admin-filters .form-field textarea,
 .admin-filters .form-field select,
 .admin-filters .form-field input {
@@ -3653,9 +3684,9 @@ img {
 
 .id-card-capture-host {
   position: fixed;
-  left: 0;
+  left: -100000px;
   top: 0;
-  z-index: 2147483646;
+  z-index: -1;
   pointer-events: none;
   overflow: hidden;
   background: #ffffff;

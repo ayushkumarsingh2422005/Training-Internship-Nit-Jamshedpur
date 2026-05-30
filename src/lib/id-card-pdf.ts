@@ -101,10 +101,21 @@ async function renderSheetCanvas(
   }
 }
 
-export async function downloadIdCardsPdf(applications: AdminApplication[]): Promise<void> {
+export type IdCardProgress = {
+  completed: number;
+  total: number;
+};
+
+export async function downloadIdCardsPdf(
+  applications: AdminApplication[],
+  onProgress?: (progress: IdCardProgress) => void,
+): Promise<void> {
   if (applications.length === 0) {
     throw new Error("No students to export");
   }
+
+  const total = applications.length;
+  onProgress?.({ completed: 0, total });
 
   const { jsPDF } = await import("jspdf");
   const pdf = new jsPDF({
@@ -125,6 +136,13 @@ export async function downloadIdCardsPdf(applications: AdminApplication[]): Prom
     const canvas = await renderSheetCanvas(applications[index], assets);
     const imgData = canvas.toDataURL("image/png", 1);
     pdf.addImage(imgData, "PNG", 0, 0, pageWidth, pageHeight, undefined, "FAST");
+
+    onProgress?.({ completed: index + 1, total });
+
+    // Yield to the event loop so the progress UI can repaint between pages.
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
   }
 
   pdf.save(idCardsPdfFileName());

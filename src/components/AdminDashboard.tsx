@@ -6,7 +6,7 @@ import type { AdminApplication } from "@/lib/admin-application";
 import type { NoticeCategory } from "@/lib/notices";
 import { AdminAttendance } from "@/components/AdminAttendance";
 import { useTopLoading } from "@/components/TopLoadingProvider";
-import { downloadIdCardsPdf } from "@/lib/id-card-pdf";
+import { downloadIdCardsPdf, type IdCardProgress } from "@/lib/id-card-pdf";
 
 type AppliedFilters = {
   q: string;
@@ -115,6 +115,7 @@ export function AdminDashboard() {
   });
   const [csvExporting, setCsvExporting] = useState(false);
   const [idCardsExporting, setIdCardsExporting] = useState(false);
+  const [idCardsProgress, setIdCardsProgress] = useState<IdCardProgress | null>(null);
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -274,6 +275,7 @@ export function AdminDashboard() {
 
   async function downloadIdCards() {
     setIdCardsExporting(true);
+    setIdCardsProgress(null);
     setError(null);
 
     const params = new URLSearchParams();
@@ -310,11 +312,12 @@ export function AdminDashboard() {
         return;
       }
 
-      await downloadIdCardsPdf(json.items);
+      await downloadIdCardsPdf(json.items, (progress) => setIdCardsProgress(progress));
     } catch {
       setError("Could not generate ID card PDF. Please try again.");
     } finally {
       setIdCardsExporting(false);
+      setIdCardsProgress(null);
     }
   }
 
@@ -607,9 +610,32 @@ export function AdminDashboard() {
             disabled={csvExporting || idCardsExporting || loading || !data?.total}
             onClick={() => void downloadIdCards()}
           >
-            {idCardsExporting ? "Preparing ID cards…" : `Download ID cards (${data?.total ?? 0})`}
+            {idCardsExporting
+              ? idCardsProgress
+                ? `Generating ID cards… ${idCardsProgress.completed}/${idCardsProgress.total}`
+                : "Preparing ID cards…"
+              : `Download ID cards (${data?.total ?? 0})`}
           </button>
         </div>
+        {idCardsExporting && idCardsProgress ? (
+          <div className="admin-idcard-progress" role="status" aria-live="polite">
+            <div className="admin-idcard-progress-bar">
+              <div
+                className="admin-idcard-progress-fill"
+                style={{
+                  width: `${
+                    idCardsProgress.total
+                      ? Math.round((idCardsProgress.completed / idCardsProgress.total) * 100)
+                      : 0
+                  }%`,
+                }}
+              />
+            </div>
+            <span className="admin-idcard-progress-text">
+              {idCardsProgress.completed} of {idCardsProgress.total} ID cards rendered
+            </span>
+          </div>
+        ) : null}
       </form> : null}
 
       {activeSection === "applications" && error ? (
