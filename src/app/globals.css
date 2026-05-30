@@ -3374,3 +3374,265 @@ img {
 .student-attendance-cal-grid {
   overflow: visible;
 }
+
+/* Application form — off-screen PDF capture + download panel */
+.application-form-wrap {
+  display: grid;
+  gap: 0;
+}
+
+.application-form-download-panel {
+  display: grid;
+  gap: 12px;
+  padding: 4px 2px;
+}
+
+.application-form-locked {
+  padding: 10px 12px;
+  border: 1px solid #ffe082;
+  border-radius: 8px;
+  background: #fff8e1;
+}
+
+.application-form-download-lead {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.application-form-download-error {
+  margin: 0;
+  font-size: 0.86rem;
+  color: #c62828;
+}
+
+.application-form-capture {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.application-form-print {
+  background: #fff;
+  color: #111;
+  padding: 16px 18px 20px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.application-form-letterhead {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) 88px;
+  align-items: center;
+  gap: 12px 16px;
+  margin: 0 0 14px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #1b5e20;
+}
+
+.application-form-letterhead-logo,
+.application-form-letterhead-emblem {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  display: block;
+}
+
+.application-form-letterhead-logo-wrap,
+.application-form-letterhead-emblem-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.application-form-letterhead-emblem-wrap {
+  justify-content: flex-end;
+}
+
+.application-form-letterhead-text {
+  text-align: center;
+  min-width: 0;
+}
+
+.application-form-letterhead-department {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #1b5e20;
+  line-height: 1.3;
+}
+
+.application-form-letterhead-title {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #111;
+  line-height: 1.3;
+}
+
+.application-form-letterhead-subtitle {
+  margin: 3px 0 0;
+  font-size: 11px;
+  font-weight: 400;
+  color: #222;
+  line-height: 1.35;
+}
+
+.application-form-form-title {
+  margin: 8px 0 0;
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #1b5e20;
+  line-height: 1.25;
+}
+
+.application-form-session {
+  margin: 4px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #333;
+}
+
+.application-form-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  gap: 0;
+  align-items: stretch;
+  border: 1px solid #333;
+}
+
+.application-form-fields-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-width: 0;
+}
+
+.application-form-field {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  border-right: 1px solid #333;
+  border-bottom: 1px solid #333;
+  min-height: 0;
+}
+
+.application-form-field-wide {
+  grid-column: 1 / -1;
+}
+
+.application-form-field-label {
+  display: block;
+  padding: 6px 8px;
+  background: #f0f0f0;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.25;
+  border-bottom: 1px solid #333;
+}
+
+.application-form-field-value {
+  display: block;
+  padding: 7px 8px;
+  font-size: 11px;
+  line-height: 1.35;
+  min-height: 28px;
+  word-break: break-word;
+}
+
+.application-form-photo-box {
+  grid-row: 1;
+  grid-column: 2;
+  border-left: 1px solid #333;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 10px 8px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #444;
+  background: #fafafa;
+}
+
+.application-form-declaration {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid #333;
+}
+
+.application-form-declaration h4 {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.application-form-declaration p {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.application-form-signatures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.application-form-sign-block {
+  min-height: 0;
+}
+
+.application-form-sign-line {
+  border-bottom: 1px solid #333;
+  height: 44px;
+  margin-bottom: 6px;
+}
+
+.application-form-sign-label {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.application-form-sign-sub {
+  margin: 2px 0 0;
+  font-size: 9px;
+  color: #555;
+}
+
+@media (max-width: 720px) {
+  .application-form-body {
+    grid-template-columns: 1fr;
+  }
+
+  .application-form-photo-box {
+    grid-column: 1;
+    grid-row: auto;
+    min-height: 100px;
+    border-left: none;
+    border-top: 1px solid #333;
+  }
+
+  .application-form-fields-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .application-form-field-wide {
+    grid-column: 1;
+  }
+
+  .application-form-signatures {
+    grid-template-columns: 1fr;
+  }
+}

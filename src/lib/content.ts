@@ -70,8 +70,8 @@ export const performanceTargets = [
     accent: "green",
   },
   {
-    label: "Annual intake",
-    value: "500",
+    label: "Current Cohort",
+    value: "1197",
     description: "Maximum students trained per year under the scheme.",
     accent: "purple",
   },

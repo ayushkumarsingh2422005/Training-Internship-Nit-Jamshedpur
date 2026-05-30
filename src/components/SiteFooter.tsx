@@ -12,6 +12,7 @@ export function SiteFooter() {
             width={72}
             height={72}
             className="footer-logo"
+            loading="lazy"
           />
           <div>
             <h3>{site.shortName}</h3>

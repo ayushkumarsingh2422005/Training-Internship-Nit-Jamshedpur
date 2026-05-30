@@ -1,8 +1,13 @@
 import Link from "next/link";
-import { programOverview, studentPortalPath } from "@/lib/content";
 import Image from "next/image";
+import { preload } from "react-dom";
+import { programOverview, studentPortalPath } from "@/lib/content";
+
+const HERO_EMBLEM_SRC = "/Jharkhand_Rajakiya_Chihna.svg";
 
 export function HeroBanner() {
+  preload(HERO_EMBLEM_SRC, { as: "image", fetchPriority: "high" });
+
   return (
     <section className="hero-banner" aria-labelledby="hero-title">
       <div className="container hero-inner">
@@ -29,7 +34,7 @@ export function HeroBanner() {
         </div>
         <div className="hero-card" aria-hidden="true">
           <Image
-            src="/Jharkhand_Rajakiya_Chihna.svg"
+            src={HERO_EMBLEM_SRC}
             alt=""
             width={480}
             height={480}

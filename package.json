@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "mongoose": "^9.6.2",
     "next": "^16.0.0",
     "nextjs-toploader": "^3.9.17",
