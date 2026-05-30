@@ -20,5 +20,5 @@ export const ID_CARD_PX = {
   height: mmToPx(ID_CARD_HEIGHT_MM),
 } as const;
 
-/** High-res raster size for logos embedded in the card. */
-export const ID_CARD_LOGO_RASTER_PX = 512;
+/** High-res raster size (longest edge, px) for logos embedded in the card. */
+export const ID_CARD_LOGO_RASTER_PX = 1200;

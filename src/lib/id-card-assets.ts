@@ -17,35 +17,35 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
   return img;
 }
 
-function rasterizeToCanvas(
-  img: HTMLImageElement,
-  width: number,
-  height: number,
-): HTMLCanvasElement {
+/**
+ * Rasterize at high resolution while preserving the image's native aspect
+ * ratio with a transparent background, so the logo stays crisp and is not
+ * shrunk by double letterboxing (canvas + CSS object-fit).
+ */
+function rasterizeToCanvas(img: HTMLImageElement, longestEdge: number): HTMLCanvasElement {
+  const naturalW = img.naturalWidth || longestEdge;
+  const naturalH = img.naturalHeight || longestEdge;
+  const scale = longestEdge / Math.max(naturalW, naturalH);
+
+  const width = Math.max(1, Math.round(naturalW * scale));
+  const height = Math.max(1, Math.round(naturalH * scale));
+
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d");
   if (!ctx) return canvas;
 
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, width, height);
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
-
-  const scale = Math.min(width / img.naturalWidth, height / img.naturalHeight);
-  const drawW = img.naturalWidth * scale;
-  const drawH = img.naturalHeight * scale;
-  const offsetX = (width - drawW) / 2;
-  const offsetY = (height - drawH) / 2;
-  ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+  ctx.drawImage(img, 0, 0, width, height);
 
   return canvas;
 }
 
-async function toDataUrl(url: string, size: number): Promise<string> {
+async function toDataUrl(url: string, longestEdge: number): Promise<string> {
   const img = await loadImage(url);
-  const canvas = rasterizeToCanvas(img, size, size);
+  const canvas = rasterizeToCanvas(img, longestEdge);
   return canvas.toDataURL("image/png");
 }
 
