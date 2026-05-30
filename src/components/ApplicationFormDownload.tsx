@@ -14,8 +14,13 @@ type Props = {
 type FormField = {
   label: string;
   value: string;
-  wide?: boolean;
 };
+
+type FormRow =
+  | { kind: "wide"; field: FormField }
+  | { kind: "pair"; left: FormField; right: FormField | null };
+
+const PHOTO_ROW_SPAN = 6;
 
 function displayValue(value: string | null | undefined, fallback = "—"): string {
   const trimmed = value?.trim();
@@ -28,54 +33,113 @@ function displayBoolean(value: boolean | null | undefined): string {
   return "—";
 }
 
-function buildFields(application: Application): FormField[] {
+function buildRows(application: Application): FormRow[] {
   return [
-    { label: "Full name of candidate", value: displayValue(application.fullName), wide: true },
-    { label: "Father's / guardian's name", value: displayValue(application.fatherName), wide: true },
-    { label: "Gender", value: displayValue(application.gender) },
+    { kind: "wide", field: { label: "Full name of candidate", value: displayValue(application.fullName) } },
     {
-      label: "Aadhaar number",
-      value: application.aadharNumber ? formatAadharDisplay(application.aadharNumber) : "—",
+      kind: "wide",
+      field: { label: "Father's / guardian's name", value: displayValue(application.fatherName) },
     },
-    { label: "College registration no.", value: displayValue(application.collegeRegistrationNumber) },
-    { label: "Government polytechnic / college", value: displayValue(application.collegeName), wide: true },
-    { label: "School / institution last attended", value: displayValue(application.schoolName), wide: true },
-    { label: "Engineering discipline (subject)", value: displayValue(application.subject) },
-    { label: "Training module allotted (subpart)", value: displayValue(application.subpart) },
-    { label: "Email address", value: displayValue(application.email) },
-    { label: "Mobile number", value: displayValue(application.phoneNumber) },
-    { label: "Residential address", value: displayValue(application.address), wide: true },
-    { label: "Hostel accommodation required", value: displayBoolean(application.wantsAccommodation) },
-    { label: "Personal laptop available", value: displayBoolean(application.hasLaptop) },
+    {
+      kind: "pair",
+      left: { label: "Gender", value: displayValue(application.gender) },
+      right: {
+        label: "Aadhaar number",
+        value: application.aadharNumber ? formatAadharDisplay(application.aadharNumber) : "—",
+      },
+    },
+    {
+      kind: "pair",
+      left: {
+        label: "College registration no.",
+        value: displayValue(application.collegeRegistrationNumber),
+      },
+      right: null,
+    },
+    {
+      kind: "wide",
+      field: {
+        label: "Government polytechnic / college",
+        value: displayValue(application.collegeName),
+      },
+    },
+    {
+      kind: "wide",
+      field: {
+        label: "School / institution last attended",
+        value: displayValue(application.schoolName),
+      },
+    },
+    {
+      kind: "pair",
+      left: { label: "Engineering discipline (subject)", value: displayValue(application.subject) },
+      right: { label: "Training module allotted (subpart)", value: displayValue(application.subpart) },
+    },
+    {
+      kind: "pair",
+      left: { label: "Email address", value: displayValue(application.email) },
+      right: { label: "Mobile number", value: displayValue(application.phoneNumber) },
+    },
+    {
+      kind: "wide",
+      field: { label: "Residential address", value: displayValue(application.address) },
+    },
+    {
+      kind: "pair",
+      left: {
+        label: "Hostel accommodation required",
+        value: displayBoolean(application.wantsAccommodation),
+      },
+      right: { label: "Personal laptop available", value: displayBoolean(application.hasLaptop) },
+    },
   ];
 }
 
+function FormFieldCell({ field }: { field: FormField }) {
+  return (
+    <div className="application-form-field">
+      <span className="application-form-field-label">{field.label}</span>
+      <span className="application-form-field-value">{field.value}</span>
+    </div>
+  );
+}
+
 function ApplicationFormDocument({ application }: Props) {
-  const fields = buildFields(application);
+  const rows = buildRows(application);
 
   return (
     <article className="application-form-print">
       <ApplicationFormHeader />
 
-      <div className="application-form-body">
-        <div className="application-form-fields-grid">
-          {fields.map((field) => (
-            <div
-              key={field.label}
-              className={`application-form-field${field.wide ? " application-form-field-wide" : ""}`}
-            >
-              <span className="application-form-field-label">{field.label}</span>
-              <span className="application-form-field-value">{field.value}</span>
-            </div>
+      <table className="application-form-table">
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={row.kind === "wide" ? row.field.label : `${row.left.label}-${row.right?.label ?? "empty"}`}>
+              {row.kind === "wide" ? (
+                <td colSpan={2} className="application-form-cell">
+                  <FormFieldCell field={row.field} />
+                </td>
+              ) : (
+                <>
+                  <td className="application-form-cell">
+                    <FormFieldCell field={row.left} />
+                  </td>
+                  <td className="application-form-cell">
+                    {row.right ? <FormFieldCell field={row.right} /> : null}
+                  </td>
+                </>
+              )}
+              {index === 0 ? (
+                <td rowSpan={PHOTO_ROW_SPAN} className="application-form-photo-cell">
+                  <div className="application-form-photo-box">
+                    <span>{applicationFormMeta.photoLabel}</span>
+                  </div>
+                </td>
+              ) : null}
+            </tr>
           ))}
-        </div>
-
-        <div className="application-form-photo-column">
-          <div className="application-form-photo-box">
-            <span>{applicationFormMeta.photoLabel}</span>
-          </div>
-        </div>
-      </div>
+        </tbody>
+      </table>
 
       <section className="application-form-declaration">
         <h4>Declaration</h4>
