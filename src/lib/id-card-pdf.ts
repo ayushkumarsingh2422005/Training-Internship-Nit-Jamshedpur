@@ -76,7 +76,7 @@ async function renderSheetCanvas(
     const { default: html2canvas } = await import("html2canvas");
 
     const canvas = await html2canvas(sheet as HTMLElement, {
-      scale: 1,
+      scale: 2,
       backgroundColor: "#ffffff",
       useCORS: true,
       allowTaint: true,
