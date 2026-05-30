@@ -3773,8 +3773,8 @@ img {
 .id-card-print-root .id-card-photo-frame {
   position: relative;
   z-index: 2;
-  width: calc(var(--ic-mm) * 21);
-  height: calc(var(--ic-mm) * 26);
+  width: calc(var(--ic-mm) * 22);
+  height: calc(var(--ic-mm) * 28.3);
   margin: calc(var(--ic-mm) * 1.2) auto calc(var(--ic-mm) * 0.6);
   border: calc(var(--ic-mm) * 0.55) solid #ffffff;
   border-radius: calc(var(--ic-mm) * 2.2) calc(var(--ic-mm) * 2.2) calc(var(--ic-mm) * 1.6) calc(var(--ic-mm) * 1.6);
