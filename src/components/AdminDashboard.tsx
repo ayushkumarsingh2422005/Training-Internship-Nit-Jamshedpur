@@ -6,6 +6,7 @@ import type { AdminApplication } from "@/lib/admin-application";
 import type { NoticeCategory } from "@/lib/notices";
 import { AdminAttendance } from "@/components/AdminAttendance";
 import { useTopLoading } from "@/components/TopLoadingProvider";
+import { downloadIdCardsPdf } from "@/lib/id-card-pdf";
 
 type AppliedFilters = {
   q: string;
@@ -113,6 +114,7 @@ export function AdminDashboard() {
     gender: "",
   });
   const [csvExporting, setCsvExporting] = useState(false);
+  const [idCardsExporting, setIdCardsExporting] = useState(false);
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -128,7 +130,7 @@ export function AdminDashboard() {
   const [activeSection, setActiveSection] = useState<"applications" | "notices" | "attendance">("applications");
 
   useTopLoading(
-    loading || noticeLoading || noticeSaving || deletingApplicationId !== null || csvExporting,
+    loading || noticeLoading || noticeSaving || deletingApplicationId !== null || csvExporting || idCardsExporting,
   );
 
   const load = useCallback(async () => {
@@ -267,6 +269,52 @@ export function AdminDashboard() {
       setError("Network error while exporting CSV.");
     } finally {
       setCsvExporting(false);
+    }
+  }
+
+  async function downloadIdCards() {
+    setIdCardsExporting(true);
+    setError(null);
+
+    const params = new URLSearchParams();
+    if (applied.q) params.set("q", applied.q);
+    if (applied.college) params.set("college", applied.college);
+    if (applied.subject) params.set("subject", applied.subject);
+    if (applied.subpart) params.set("subpart", applied.subpart);
+    if (applied.accommodation) params.set("accommodation", applied.accommodation);
+    if (applied.laptop) params.set("laptop", applied.laptop);
+    if (applied.gender) params.set("gender", applied.gender);
+    params.set("export", "idcards");
+
+    try {
+      const response = await fetch(`/api/admin/applications?${params.toString()}`);
+      if (response.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
+      if (!response.ok) {
+        let message = "Failed to prepare ID cards.";
+        try {
+          const json = (await response.json()) as { error?: string };
+          message = json.error ?? message;
+        } catch {
+          // non-JSON error body
+        }
+        setError(message);
+        return;
+      }
+
+      const json = (await response.json()) as { items?: AdminApplication[] };
+      if (!json.items?.length) {
+        setError("No students match the current filters.");
+        return;
+      }
+
+      await downloadIdCardsPdf(json.items);
+    } catch {
+      setError("Could not generate ID card PDF. Please try again.");
+    } finally {
+      setIdCardsExporting(false);
     }
   }
 
@@ -548,10 +596,18 @@ export function AdminDashboard() {
           <button
             type="button"
             className="btn btn-secondary btn-sm"
-            disabled={csvExporting || loading || !data?.total}
+            disabled={csvExporting || idCardsExporting || loading || !data?.total}
             onClick={() => void downloadCsv()}
           >
             {csvExporting ? "Preparing CSV…" : `Download CSV (${data?.total ?? 0})`}
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            disabled={csvExporting || idCardsExporting || loading || !data?.total}
+            onClick={() => void downloadIdCards()}
+          >
+            {idCardsExporting ? "Preparing ID cards…" : `Download ID cards (${data?.total ?? 0})`}
           </button>
         </div>
       </form> : null}

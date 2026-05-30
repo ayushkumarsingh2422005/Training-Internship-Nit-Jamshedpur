@@ -3648,3 +3648,375 @@ img {
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Intern ID cards — CR80 portrait (53.98 × 85.6 mm) @ 300 DPI capture ── */
+
+.id-card-capture-host {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 2147483646;
+  pointer-events: none;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.id-card-print-root {
+  --ic-mm: 11.811px; /* overridden inline at 300 DPI */
+  --ic-green: #1a5c28;
+  --ic-green-dark: #144720;
+  --ic-gold: #f9a825;
+  --ic-green-soft: #e8f5e9;
+}
+
+.id-card-print-root .id-card-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--ic-mm) * 6);
+  background: #ffffff;
+  box-sizing: border-box;
+  padding: calc(var(--ic-mm) * 8) calc(var(--ic-mm) * 10);
+  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+.id-card-print-root .id-card {
+  width: calc(var(--ic-mm) * 53.98);
+  height: calc(var(--ic-mm) * 85.6);
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+  border: calc(var(--ic-mm) * 0.35) solid #bdbdbd;
+  border-radius: calc(var(--ic-mm) * 2.8);
+  box-sizing: border-box;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 calc(var(--ic-mm) * 0.6) calc(var(--ic-mm) * 1.8) rgba(0, 0, 0, 0.08);
+}
+
+/* Diagonal green / white / gold strip background (SVG — reliable in PDF capture) */
+.id-card-print-root .id-card-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.id-card-print-root .id-card-bg-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.id-card-print-root .id-card-header {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: calc(var(--ic-mm) * 12) minmax(0, 1fr) calc(var(--ic-mm) * 12);
+  align-items: center;
+  gap: calc(var(--ic-mm) * 1);
+  padding: calc(var(--ic-mm) * 1.6) calc(var(--ic-mm) * 1.4) calc(var(--ic-mm) * 1.2);
+  background: linear-gradient(180deg, var(--ic-green-dark) 0%, var(--ic-green) 100%);
+  color: #ffffff;
+  min-height: calc(var(--ic-mm) * 13);
+  flex-shrink: 0;
+}
+
+.id-card-print-root .id-card-logo {
+  width: calc(var(--ic-mm) * 11);
+  height: calc(var(--ic-mm) * 11);
+  object-fit: contain;
+  flex-shrink: 0;
+  background: #ffffff;
+  border-radius: calc(var(--ic-mm) * 0.8);
+  padding: calc(var(--ic-mm) * 0.35);
+  display: block;
+  image-rendering: auto;
+}
+
+.id-card-print-root .id-card-emblem {
+  justify-self: end;
+}
+
+.id-card-print-root .id-card-header-text {
+  min-width: 0;
+  text-align: center;
+}
+
+.id-card-print-root .id-card-org {
+  margin: 0;
+  font-size: calc(var(--ic-mm) * 2.65);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.id-card-print-root .id-card-tagline {
+  margin: calc(var(--ic-mm) * 0.35) 0 0;
+  font-size: calc(var(--ic-mm) * 1.85);
+  line-height: 1.2;
+}
+
+.id-card-print-root .id-card-dept {
+  margin: calc(var(--ic-mm) * 0.35) 0 0;
+  font-size: calc(var(--ic-mm) * 1.65);
+  line-height: 1.2;
+  opacity: 0.92;
+}
+
+.id-card-print-root .id-card-photo-frame {
+  position: relative;
+  z-index: 2;
+  width: calc(var(--ic-mm) * 21);
+  height: calc(var(--ic-mm) * 26);
+  margin: calc(var(--ic-mm) * -0.5) auto calc(var(--ic-mm) * 0.6);
+  border: calc(var(--ic-mm) * 0.55) solid #ffffff;
+  border-radius: calc(var(--ic-mm) * 2.2) calc(var(--ic-mm) * 2.2) calc(var(--ic-mm) * 1.6) calc(var(--ic-mm) * 1.6);
+  background: linear-gradient(180deg, var(--ic-green) 0%, var(--ic-green-dark) 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: calc(var(--ic-mm) * 0.8);
+  box-sizing: border-box;
+  box-shadow: 0 calc(var(--ic-mm) * 0.5) calc(var(--ic-mm) * 1.2) rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
+}
+
+.id-card-print-root .id-card-photo-icon {
+  font-size: calc(var(--ic-mm) * 8);
+  line-height: 1;
+  opacity: 0.55;
+  filter: grayscale(1) brightness(3);
+}
+
+.id-card-print-root .id-card-photo-label {
+  margin-top: calc(var(--ic-mm) * 0.8);
+  font-size: calc(var(--ic-mm) * 1.45);
+  font-weight: 700;
+  line-height: 1.25;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.id-card-print-root .id-card-data-list {
+  display: grid;
+  gap: calc(var(--ic-mm) * 0.65);
+  width: 100%;
+}
+
+.id-card-print-root .id-card-data-row {
+  display: grid;
+  grid-template-columns: calc(var(--ic-mm) * 3.8) calc(var(--ic-mm) * 9.5) minmax(0, 1fr);
+  gap: calc(var(--ic-mm) * 0.4);
+  align-items: start;
+  font-size: calc(var(--ic-mm) * 1.75);
+  line-height: 1.22;
+}
+
+.id-card-print-root .id-card-data-icon {
+  color: var(--ic-green);
+  font-size: calc(var(--ic-mm) * 2.3);
+  line-height: 1;
+}
+
+.id-card-print-root .id-card-data-label {
+  font-weight: 700;
+  color: var(--ic-green);
+}
+
+.id-card-print-root .id-card-data-value {
+  color: #111;
+  word-break: break-word;
+}
+
+.id-card-print-root .id-card-name {
+  margin: calc(var(--ic-mm) * 0.8) 0 calc(var(--ic-mm) * 0.3);
+  font-size: calc(var(--ic-mm) * 3.1);
+  font-weight: 800;
+  line-height: 1.08;
+  text-align: center;
+  color: #111111;
+  word-break: break-word;
+}
+
+.id-card-print-root .id-card-name-first {
+  color: var(--ic-green);
+}
+
+.id-card-print-root .id-card-role {
+  margin: 0 0 calc(var(--ic-mm) * 0.8);
+  text-align: center;
+  font-size: calc(var(--ic-mm) * 1.85);
+  font-weight: 600;
+  color: #444444;
+}
+
+.id-card-print-root .id-card-content-panel {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin: 0 calc(var(--ic-mm) * 1.2);
+  padding: calc(var(--ic-mm) * 1.4) calc(var(--ic-mm) * 1.6) calc(var(--ic-mm) * 1.4);
+  background: rgba(255, 255, 255, 0.97);
+  border-radius: calc(var(--ic-mm) * 1.4) calc(var(--ic-mm) * 1.4) calc(var(--ic-mm) * 1.8) calc(var(--ic-mm) * 1.8);
+  box-shadow: 0 calc(var(--ic-mm) * 0.3) calc(var(--ic-mm) * 0.8) rgba(0, 0, 0, 0.06);
+}
+
+.id-card-print-root .id-card-front-panel {
+  justify-content: flex-start;
+  gap: calc(var(--ic-mm) * 0.5);
+}
+
+.id-card-print-root .id-card-back-panel {
+  gap: calc(var(--ic-mm) * 0.9);
+  margin-top: calc(var(--ic-mm) * 0.4);
+}
+
+.id-card-print-root .id-card-type-badge {
+  margin: 0 0 calc(var(--ic-mm) * 0.6);
+  text-align: center;
+  font-size: calc(var(--ic-mm) * 1.55);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--ic-green);
+}
+
+.id-card-print-root .id-card-front-footer {
+  margin-top: auto;
+  padding-top: calc(var(--ic-mm) * 0.8);
+  border-top: calc(var(--ic-mm) * 0.2) solid #e0e0e0;
+  text-align: center;
+}
+
+.id-card-print-root .id-card-validity {
+  margin: 0 0 calc(var(--ic-mm) * 0.35);
+  font-size: calc(var(--ic-mm) * 1.65);
+  color: #333333;
+}
+
+.id-card-print-root .id-card-validity strong {
+  color: var(--ic-green);
+}
+
+.id-card-print-root .id-card-college-line {
+  margin: 0 0 calc(var(--ic-mm) * 0.35);
+  font-size: calc(var(--ic-mm) * 1.5);
+  line-height: 1.3;
+  color: #555555;
+  text-align: center;
+  word-break: break-word;
+}
+
+.id-card-print-root .id-card-issuer {
+  margin: 0 0 calc(var(--ic-mm) * 0.5);
+  font-size: calc(var(--ic-mm) * 1.35);
+  line-height: 1.25;
+  color: #777777;
+  text-align: center;
+}
+
+.id-card-print-root .id-card-back-body {
+  display: none;
+}
+
+.id-card-print-root .id-card-back-label {
+  display: block;
+  font-size: calc(var(--ic-mm) * 1.85);
+  font-weight: 700;
+  color: var(--ic-green);
+  margin-bottom: calc(var(--ic-mm) * 0.35);
+}
+
+.id-card-print-root .id-card-back-value {
+  margin: 0;
+  font-size: calc(var(--ic-mm) * 1.7);
+  line-height: 1.3;
+  color: #111111;
+  word-break: break-word;
+}
+
+.id-card-print-root .id-card-signature-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-top: calc(var(--ic-mm) * 0.2);
+}
+
+.id-card-print-root .id-card-signature-img {
+  width: calc(var(--ic-mm) * 24);
+  height: auto;
+  max-height: calc(var(--ic-mm) * 8);
+  object-fit: contain;
+  display: block;
+}
+
+.id-card-print-root .id-card-signature-label {
+  margin: calc(var(--ic-mm) * 0.4) 0 0;
+  font-size: calc(var(--ic-mm) * 1.55);
+  font-weight: 600;
+  color: #444444;
+}
+
+.id-card-print-root .id-card-back-footer {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+  padding-top: calc(var(--ic-mm) * 0.6);
+  border-top: calc(var(--ic-mm) * 0.2) solid #e0e0e0;
+}
+
+.id-card-print-root .id-card-back-meta p {
+  margin: 0 0 calc(var(--ic-mm) * 0.35);
+  font-size: calc(var(--ic-mm) * 1.55);
+  line-height: 1.25;
+  color: #333333;
+}
+
+.id-card-print-root .id-card-back-meta strong {
+  color: var(--ic-green);
+}
+
+.id-card-print-root .id-card-return-notice {
+  font-size: calc(var(--ic-mm) * 1.4) !important;
+  font-style: italic;
+  color: #666666 !important;
+  line-height: 1.3 !important;
+}
+
+.id-card-print-root .id-card-barcode-wrap {
+  display: flex;
+  justify-content: center;
+  padding: calc(var(--ic-mm) * 0.45);
+  border: calc(var(--ic-mm) * 0.35) solid var(--ic-green);
+  border-radius: calc(var(--ic-mm) * 0.5);
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.id-card-print-root .id-card-barcode-wrap-compact {
+  padding: calc(var(--ic-mm) * 0.3);
+}
+
+.id-card-print-root .id-card-barcode-svg {
+  width: 100%;
+  max-width: calc(var(--ic-mm) * 42);
+  height: auto;
+  display: block;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.id-card-print-root .id-card-barcode-svg-compact {
+  max-width: calc(var(--ic-mm) * 38);
+}

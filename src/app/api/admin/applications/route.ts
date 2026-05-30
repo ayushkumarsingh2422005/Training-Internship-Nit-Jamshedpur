@@ -21,12 +21,13 @@ export async function GET(request: Request) {
     const filterParams = parseAdminApplicationFilterParams(searchParams);
     const filter = buildAdminApplicationFilter(filterParams);
     const exportCsv = searchParams.get("export") === "csv";
+    const exportIdCards = searchParams.get("export") === "idcards";
     const page = Math.max(Number(searchParams.get("page") ?? 1), 1);
     const limit = Math.min(Math.max(Number(searchParams.get("limit") ?? 50), 1), 200);
 
     await connectDB();
 
-    if (exportCsv) {
+    if (exportCsv || exportIdCards) {
       const total = await Application.countDocuments(filter);
       if (total > MAX_CSV_EXPORT) {
         return NextResponse.json(
@@ -38,6 +39,14 @@ export async function GET(request: Request) {
       }
 
       const items = await Application.find(filter).sort({ fullName: 1 }).lean();
+
+      if (exportIdCards) {
+        return NextResponse.json({
+          total,
+          items: items.map((doc) => toAdminApplication(doc)),
+        });
+      }
+
       const csv = adminApplicationsToCsv(items.map((doc) => toAdminApplication(doc)));
       const date = new Date().toISOString().slice(0, 10);
 
