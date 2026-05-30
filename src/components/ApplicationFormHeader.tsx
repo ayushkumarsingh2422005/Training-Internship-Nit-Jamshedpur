@@ -9,8 +9,8 @@ export function ApplicationFormHeader() {
       </div>
 
       <div className="application-form-letterhead-text">
-        <p className="application-form-letterhead-department">{applicationFormMeta.letterheadDepartment}</p>
         <p className="application-form-letterhead-title">{applicationFormMeta.letterheadTitle}</p>
+        <p className="application-form-letterhead-department">{applicationFormMeta.letterheadDepartment}</p>
         <p className="application-form-letterhead-subtitle">{applicationFormMeta.letterheadSubtitle}</p>
         <h3 className="application-form-form-title">{applicationFormMeta.title}</h3>
         <p className="application-form-session">Session: {applicationFormMeta.session}</p>

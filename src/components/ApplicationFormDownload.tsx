@@ -70,8 +70,10 @@ function ApplicationFormDocument({ application }: Props) {
           ))}
         </div>
 
-        <div className="application-form-photo-box">
-          <span>{applicationFormMeta.photoLabel}</span>
+        <div className="application-form-photo-column">
+          <div className="application-form-photo-box">
+            <span>{applicationFormMeta.photoLabel}</span>
+          </div>
         </div>
       </div>
 
