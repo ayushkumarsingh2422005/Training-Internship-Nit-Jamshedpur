@@ -17,4 +17,5 @@ export type Application = {
   profileCorrectedAt?: string | null;
   hasLaptop?: boolean | null;
   laptopUpdatedAt?: string | null;
+  internId?: string | null;
 };

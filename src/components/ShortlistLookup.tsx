@@ -233,7 +233,15 @@ export function ShortlistLookup() {
               </span>
               <div>
                 <h3>Shortlisted</h3>
-                <p>Congratulations, {state.application.fullName}!</p>
+                <p>
+                  Congratulations, {state.application.fullName}!
+                  {state.application.internId ? (
+                    <>
+                      {" "}
+                      Your Intern ID is <strong>{state.application.internId}</strong>.
+                    </>
+                  ) : null}
+                </p>
               </div>
             </div>
 

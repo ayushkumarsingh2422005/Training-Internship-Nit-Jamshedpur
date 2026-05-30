@@ -469,7 +469,7 @@ export function AdminDashboard() {
             <input
               id="admin-q"
               type="search"
-              placeholder="Name, email, phone, school…"
+              placeholder="Name, email, phone, Intern ID, school…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
@@ -574,6 +574,7 @@ export function AdminDashboard() {
             <table className="admin-table">
               <thead>
                 <tr>
+                  <th>Intern ID</th>
                   <th>Name</th>
                   <th>Email</th>
                   <th>Mobile</th>
@@ -589,6 +590,7 @@ export function AdminDashboard() {
                 {data.items.map((app) => (
                   <Fragment key={app.id}>
                     <tr>
+                      <td>{app.internId || "—"}</td>
                       <td>{app.fullName}</td>
                       <td>
                         <a href={`mailto:${app.email}`}>{app.email}</a>
@@ -621,7 +623,7 @@ export function AdminDashboard() {
                     </tr>
                     {expandedId === app.id ? (
                       <tr className="admin-detail-row">
-                        <td colSpan={9}>
+                        <td colSpan={10}>
                           <dl className="admin-detail-grid">
                             <div>
                               <dt>Father / guardian</dt>

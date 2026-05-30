@@ -21,6 +21,7 @@ function formatDate(iso: string | null | undefined): string {
 }
 
 const CSV_HEADERS = [
+  "Intern ID",
   "Full Name",
   "Father / Guardian",
   "Email",
@@ -40,6 +41,7 @@ const CSV_HEADERS = [
 
 export function adminApplicationsToCsv(items: AdminApplication[]): string {
   const rows = items.map((app) => [
+    app.internId ?? "",
     app.fullName,
     app.fatherName,
     app.email,

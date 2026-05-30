@@ -19,6 +19,7 @@ export type DbApplicationInput = {
   profileCorrectedAt?: unknown;
   hasLaptop?: boolean | null;
   laptopUpdatedAt?: unknown;
+  internId?: string | null;
 };
 
 export function toApplicationResponse(doc: DbApplicationInput): Application {
@@ -70,5 +71,6 @@ export function toApplicationResponse(doc: DbApplicationInput): Application {
     profileCorrectedAt,
     hasLaptop: doc.hasLaptop === true || doc.hasLaptop === false ? doc.hasLaptop : null,
     laptopUpdatedAt,
+    internId: doc.internId?.trim() || null,
   };
 }

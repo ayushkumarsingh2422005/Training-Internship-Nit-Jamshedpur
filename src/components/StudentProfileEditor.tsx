@@ -162,6 +162,10 @@ export function StudentProfileEditor({ application, onUpdated }: Props) {
         <>
           <dl className="shortlist-details compact-grid">
             <div>
+              <dt>Intern ID</dt>
+              <dd>{application.internId || "—"}</dd>
+            </div>
+            <div>
               <dt>Name</dt>
               <dd>{application.fullName}</dd>
             </div>

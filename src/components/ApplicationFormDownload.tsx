@@ -20,7 +20,7 @@ type FormRow =
   | { kind: "wide"; field: FormField }
   | { kind: "pair"; left: FormField; right: FormField | null };
 
-const PHOTO_ROW_SPAN = 6;
+const PHOTO_ROW_SPAN = 7;
 
 function displayValue(value: string | null | undefined, fallback = "—"): string {
   const trimmed = value?.trim();
@@ -35,6 +35,10 @@ function displayBoolean(value: boolean | null | undefined): string {
 
 function buildRows(application: Application): FormRow[] {
   return [
+    {
+      kind: "wide",
+      field: { label: "Intern ID", value: displayValue(application.internId) },
+    },
     { kind: "wide", field: { label: "Full name of candidate", value: displayValue(application.fullName) } },
     {
       kind: "wide",

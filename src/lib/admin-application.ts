@@ -70,6 +70,7 @@ export function toAdminApplication(doc: AdminDoc): AdminApplication {
     profileCorrectedAt,
     hasLaptop: doc.hasLaptop === true || doc.hasLaptop === false ? doc.hasLaptop : null,
     laptopUpdatedAt,
+    internId: doc.internId?.trim() || null,
     createdAt,
     updatedAt,
   };

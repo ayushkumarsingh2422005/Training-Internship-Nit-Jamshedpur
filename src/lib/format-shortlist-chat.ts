@@ -14,6 +14,7 @@ export function hostelStatusLine(app: Application): string {
 export function formatShortlistSuccess(app: Application): string {
   return [
     `Congratulations, ${app.fullName}! You are on the shortlist.`,
+    app.internId ? `Intern ID: ${app.internId}` : "",
     "",
     `College: ${app.collegeName}`,
     `Branch: ${app.subject}`,

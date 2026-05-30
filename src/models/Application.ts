@@ -19,6 +19,7 @@ const applicationSchema = new Schema(
     profileCorrectedAt: { type: Date, default: null },
     hasLaptop: { type: Boolean, default: null },
     laptopUpdatedAt: { type: Date, default: null },
+    internId: { type: String, default: null, trim: true },
   },
   {
     timestamps: true,
@@ -29,6 +30,7 @@ const applicationSchema = new Schema(
 applicationSchema.index({ email: 1 }, { unique: true });
 applicationSchema.index({ phoneNumber: 1 });
 applicationSchema.index({ subject: 1, subpart: 1 });
+applicationSchema.index({ internId: 1 }, { unique: true, sparse: true });
 
 export type ApplicationDocument = InferSchemaType<typeof applicationSchema> & {
   _id: mongoose.Types.ObjectId;

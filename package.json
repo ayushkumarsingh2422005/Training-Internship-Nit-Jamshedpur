@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "db:seed": "tsx scripts/seed-mongodb.ts",
-    "db:seed:reset": "tsx scripts/seed-mongodb.ts --reset"
+    "db:seed:reset": "tsx scripts/seed-mongodb.ts --reset",
+    "db:assign-intern-ids": "tsx scripts/assign-intern-ids.ts"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",

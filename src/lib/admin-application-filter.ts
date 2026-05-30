@@ -53,6 +53,7 @@ export function buildAdminApplicationFilter(
       { email: regex },
       { phoneNumber: regex },
       { schoolName: regex },
+      { internId: regex },
     ];
   }
 

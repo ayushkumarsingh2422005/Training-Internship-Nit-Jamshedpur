@@ -11,6 +11,7 @@ import Application, { type ApplicationInput } from "../src/models/Application";
 import Notice from "../src/models/Notice";
 import { notices } from "../src/lib/content";
 import { normalizeNoticeSeed } from "../src/lib/notices";
+import { formatInternId, nextInternIdSequence } from "../src/lib/intern-id";
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 
@@ -86,6 +87,34 @@ async function main() {
       matchedCount: writeResult.matchedCount,
     };
     total = await Application.countDocuments();
+  }
+
+  const missingInternId = await Application.find({ $or: [{ internId: null }, { internId: "" }] })
+    .sort({ createdAt: 1, _id: 1 })
+    .select({ internId: 1 })
+    .lean();
+
+  if (missingInternId.length > 0) {
+    const allIds = await Application.find({ internId: { $nin: [null, ""] } })
+      .select({ internId: 1 })
+      .lean();
+    let nextSequence = nextInternIdSequence(allIds.map((doc) => doc.internId));
+
+    const internOps = missingInternId.map((doc) => {
+      const internId = formatInternId(nextSequence);
+      nextSequence += 1;
+      return {
+        updateOne: {
+          filter: { _id: doc._id },
+          update: { $set: { internId } },
+        },
+      };
+    });
+
+    const internResult = await Application.bulkWrite(internOps, { ordered: true });
+    console.log("\nIntern IDs assigned:");
+    console.log(`  Modified: ${internResult.modifiedCount}`);
+    console.log(`  Assigned: ${missingInternId.length}`);
   }
 
   const noticeOps = notices.map((notice) => {
