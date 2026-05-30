@@ -134,7 +134,6 @@ export function IdCardSheet({ application, nitLogoUrl, govEmblemUrl, signatureUr
   const internId = displayValue(application.internId, "Pending");
   const barcodeValue = application.internId?.trim() || application.email.trim();
   const { first: nameFirst, rest: nameRest } = splitDisplayName(application.fullName);
-  const validity = `${idCardMeta.issueDate} – ${idCardMeta.expireDate}`;
 
   return (
     <div className="id-card-page">
@@ -153,13 +152,6 @@ export function IdCardSheet({ application, nitLogoUrl, govEmblemUrl, signatureUr
         </div>
 
         <div className="id-card-content-panel id-card-front-panel">
-          <p className="id-card-type-badge">{idCardMeta.cardType}</p>
-
-          <div className="id-card-data-list">
-            <DataRow icon="▣" label="ID" value={internId} />
-            <DataRow icon="◉" label="Module" value={displayValue(application.subpart)} />
-          </div>
-
           <h2 className="id-card-name">
             <span className="id-card-name-first">{nameFirst.toUpperCase()}</span>
             {nameRest ? ` ${nameRest.toUpperCase()}` : ""}
@@ -167,26 +159,11 @@ export function IdCardSheet({ application, nitLogoUrl, govEmblemUrl, signatureUr
           <p className="id-card-role">{idCardMeta.designation}</p>
 
           <div className="id-card-data-list">
-            <DataRow icon="◈" label="Branch" value={displayValue(application.subject)} />
+            <DataRow icon="▣" label="ID" value={internId} />
+            <DataRow icon="◉" label="Module" value={displayValue(application.subpart)} />
             <DataRow icon="✉" label="Email" value={displayValue(application.email)} />
             <DataRow icon="☎" label="Phone" value={displayValue(application.phoneNumber)} />
-            <DataRow
-              icon="▤"
-              label="Reg. no."
-              value={displayValue(application.collegeRegistrationNumber)}
-            />
           </div>
-
-          <footer className="id-card-front-footer">
-            <p className="id-card-validity">
-              <strong>Valid :</strong> {validity}
-            </p>
-            <p className="id-card-college-line">{displayValue(application.collegeName)}</p>
-            <p className="id-card-issuer">{idCardMeta.issuerLine}</p>
-            <div className="id-card-barcode-wrap id-card-barcode-wrap-compact">
-              <IdCardBarcode value={barcodeValue} compact />
-            </div>
-          </footer>
         </div>
       </article>
 
