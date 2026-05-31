@@ -11,7 +11,6 @@ export const applicationFormMeta = {
 
 export const applicationFormSignatures = [
   { label: "Signature of the Candidate", sub: "Name in block letters" },
-  { label: "Recommendation of Principal / TPO", sub: "College seal & signature" },
 ] as const;
 
 export function applicationFormFileName(fullName: string): string {
