@@ -8,6 +8,7 @@ const noticeSchema = new Schema(
     category: { type: String, required: true, trim: true, maxlength: 60 },
     excerpt: { type: String, required: true, trim: true },
     body: { type: String, required: true, trim: true },
+    pdfUrl: { type: String, default: null, trim: true },
     isNew: { type: Boolean, default: false },
     isPublished: { type: Boolean, default: true },
   },

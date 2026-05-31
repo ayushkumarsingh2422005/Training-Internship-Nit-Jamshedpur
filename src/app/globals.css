@@ -1662,6 +1662,28 @@ img {
   margin: 0;
 }
 
+.notice-pdf-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-weight: 600;
+  color: var(--green, #1a7f37);
+  text-decoration: none;
+}
+
+.notice-pdf-link:hover {
+  text-decoration: underline;
+}
+
+.admin-notice-pdf-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 0.9rem;
+}
+
 /* Results */
 .result-grid {
   display: grid;
@@ -3430,6 +3452,12 @@ img {
   font-size: 0.9rem;
   color: var(--muted);
   line-height: 1.45;
+}
+
+.application-form-download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .application-form-download-error {

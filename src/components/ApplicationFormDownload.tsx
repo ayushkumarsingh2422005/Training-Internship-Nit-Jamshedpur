@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { applicationFormMeta, applicationFormSignatures } from "@/lib/application-form";
 import { downloadApplicationFormPdf } from "@/lib/application-form-pdf";
+import { downloadStudentIdCardPdf } from "@/lib/id-card-pdf";
 import { ApplicationFormHeader } from "@/components/ApplicationFormHeader";
 import { formatAadharDisplay, isProfileComplete } from "@/lib/profile";
 import type { Application } from "@/types/application";
@@ -166,6 +167,7 @@ function ApplicationFormDocument({ application }: Props) {
 export function ApplicationFormDownload({ application }: Props) {
   const formRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
+  const [idDownloading, setIdDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const profileComplete = isProfileComplete(application);
 
@@ -187,13 +189,29 @@ export function ApplicationFormDownload({ application }: Props) {
     }
   }, [application.fullName, profileComplete]);
 
+  const handleIdCardDownload = useCallback(async () => {
+    if (!profileComplete) return;
+
+    setIdDownloading(true);
+    setError(null);
+
+    try {
+      await downloadStudentIdCardPdf(application);
+    } catch {
+      setError("Could not generate the ID card. Please try again in a moment.");
+    } finally {
+      setIdDownloading(false);
+    }
+  }, [application, profileComplete]);
+
   if (!profileComplete) {
     return (
       <div className="application-form-wrap">
         <div className="application-form-download-panel application-form-locked">
           <p className="application-form-download-lead">
             Complete your profile in the <strong>Profile Info</strong> tab first — including college, Aadhaar,
-            gender, and college registration number. The application form unlocks after your profile is saved.
+            gender, and college registration number. The application form and ID card unlock after your profile is
+            saved.
           </p>
         </div>
       </div>
@@ -204,11 +222,27 @@ export function ApplicationFormDownload({ application }: Props) {
     <div className="application-form-wrap">
       <div className="application-form-download-panel">
         <p className="application-form-download-lead">
-          Download your pre-filled application form as a PDF. Sign where indicated before reporting to campus.
+          Download your pre-filled application form and your intern ID card as PDFs. Sign the application form where
+          indicated before reporting to campus, and affix a passport-size photo on the printed ID card.
         </p>
-        <button type="button" className="btn btn-green" onClick={handleDownload} disabled={downloading}>
-          {downloading ? "Preparing PDF…" : "Download application form (PDF)"}
-        </button>
+        <div className="application-form-download-actions">
+          <button
+            type="button"
+            className="btn btn-green"
+            onClick={handleDownload}
+            disabled={downloading || idDownloading}
+          >
+            {downloading ? "Preparing form…" : "Download application form (PDF)"}
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleIdCardDownload}
+            disabled={downloading || idDownloading}
+          >
+            {idDownloading ? "Preparing ID card…" : "Download ID card (PDF)"}
+          </button>
+        </div>
         {error ? (
           <p className="application-form-download-error" role="alert">
             {error}

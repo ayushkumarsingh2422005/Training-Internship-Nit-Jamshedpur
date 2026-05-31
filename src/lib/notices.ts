@@ -23,6 +23,7 @@ export type PublicNotice = {
   category: NoticeCategory;
   excerpt: string;
   body: string;
+  pdfUrl: string | null;
   isNew: boolean;
 };
 
@@ -53,6 +54,7 @@ export function toPublicNotice(doc: NoticeDocument): PublicNotice {
     category: doc.category as NoticeCategory,
     excerpt: doc.excerpt,
     body: doc.body,
+    pdfUrl: doc.pdfUrl?.trim() || null,
     isNew: Boolean(doc.isNew),
   };
 }
@@ -126,6 +128,7 @@ export function normalizeNoticeSeed(source: ContentNotice) {
     category: source.category,
     excerpt: source.excerpt.trim(),
     body: source.body.trim(),
+    pdfUrl: null,
     isNew: Boolean(source.isNew),
     isPublished: true,
   };

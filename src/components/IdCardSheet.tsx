@@ -2,10 +2,10 @@
 
 import { useEffect, useId, useRef } from "react";
 import { idCardMeta } from "@/lib/id-card-meta";
-import type { AdminApplication } from "@/lib/admin-application";
+import type { Application } from "@/types/application";
 
 type Props = {
-  application: AdminApplication;
+  application: Application;
   nitLogoUrl: string;
   govEmblemUrl: string;
   signatureUrl: string;

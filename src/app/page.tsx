@@ -36,6 +36,7 @@ export default async function HomePage() {
       category: item.category,
       excerpt: item.excerpt,
       body: item.body,
+      pdfUrl: null,
       isNew: Boolean(item.isNew),
     })),
   );

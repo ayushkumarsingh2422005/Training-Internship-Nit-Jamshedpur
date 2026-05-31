@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { type NoticeCategory, toAdminNotice } from "@/lib/notices";
 import { getAdminSessionFromRequest } from "@/lib/admin-session";
+import { deleteNoticePdf } from "@/lib/notice-pdf-storage";
 import { revalidatePublicNoticePages } from "@/lib/revalidate-public";
 import connectDB from "@/lib/mongodb";
 import Notice from "@/models/Notice";
@@ -14,6 +15,7 @@ type NoticePayload = {
   category?: string;
   excerpt?: string;
   body?: string;
+  pdfUrl?: string | null;
   isNew?: boolean;
   isPublished?: boolean;
 };
@@ -84,6 +86,7 @@ export async function POST(request: Request) {
       category: body.category?.trim() as NoticeCategory,
       excerpt: body.excerpt?.trim(),
       body: body.body?.trim(),
+      pdfUrl: typeof body.pdfUrl === "string" && body.pdfUrl.trim() ? body.pdfUrl.trim() : null,
       isNew: Boolean(body.isNew),
       isPublished: body.isPublished ?? true,
     });
@@ -117,13 +120,31 @@ export async function PATCH(request: Request) {
     if (typeof body.category === "string") update.category = body.category.trim() as NoticeCategory;
     if (typeof body.excerpt === "string") update.excerpt = body.excerpt.trim();
     if (typeof body.body === "string") update.body = body.body.trim();
+    if (body.pdfUrl !== undefined) {
+      update.pdfUrl = typeof body.pdfUrl === "string" && body.pdfUrl.trim() ? body.pdfUrl.trim() : null;
+    }
     if (typeof body.isNew === "boolean") update.isNew = body.isNew;
     if (typeof body.isPublished === "boolean") update.isPublished = body.isPublished;
 
     await connectDB();
+
+    const existing = await Notice.findById(body.id).lean();
+    if (!existing) {
+      return NextResponse.json({ error: "Notice not found." }, { status: 404 });
+    }
+
     const updated = await Notice.findByIdAndUpdate(body.id, { $set: update }, { new: true }).lean();
     if (!updated) {
       return NextResponse.json({ error: "Notice not found." }, { status: 404 });
+    }
+
+    // If the PDF changed (replaced or removed), delete the previous file.
+    if ("pdfUrl" in update) {
+      const previousPdf = existing.pdfUrl ?? null;
+      const nextPdf = (update.pdfUrl as string | null) ?? null;
+      if (previousPdf && previousPdf !== nextPdf) {
+        await deleteNoticePdf(previousPdf);
+      }
     }
 
     revalidatePublicNoticePages();
@@ -151,6 +172,9 @@ export async function DELETE(request: Request) {
     if (!deleted) {
       return NextResponse.json({ error: "Notice not found." }, { status: 404 });
     }
+
+    // Clean up the attached PDF (if any) from /public/notices.
+    await deleteNoticePdf(deleted.pdfUrl ?? null);
 
     revalidatePublicNoticePages();
 

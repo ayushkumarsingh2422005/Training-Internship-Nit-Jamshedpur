@@ -294,7 +294,7 @@ export function ShortlistLookup() {
                 className={`profile-tab${activeTab === "application-form" ? " active" : ""}`}
                 onClick={() => setActiveTab("application-form")}
               >
-                Application Form
+                Application &amp; ID-Card
                 {!isProfileComplete(state.application) ? (
                   <span className="profile-tab-badge pending">Pending</span>
                 ) : null}

@@ -1,7 +1,7 @@
 import { createRoot, type Root } from "react-dom/client";
 import { createElement } from "react";
 import { IdCardSheet } from "@/components/IdCardSheet";
-import type { AdminApplication } from "@/lib/admin-application";
+import type { Application } from "@/types/application";
 import { loadIdCardAssets, type IdCardAssetUrls } from "@/lib/id-card-assets";
 import { ID_CARD_PDF_DPI, mmToPx } from "@/lib/id-card-constants";
 import { idCardsPdfFileName } from "@/lib/id-card-meta";
@@ -47,10 +47,19 @@ type RenderedSheet = {
   heightMm: number;
 };
 
+function createCaptureHost(): HTMLElement {
+  const host = document.createElement("div");
+  host.className = "id-card-capture-host id-card-print-root";
+  host.style.setProperty("--ic-mm", `${mmToPx(1)}px`);
+  host.style.display = "inline-block";
+  document.body.appendChild(host);
+  return host;
+}
+
 async function renderSheetCanvas(
   host: HTMLElement,
   root: Root,
-  application: AdminApplication,
+  application: Application,
   assets: IdCardAssetUrls,
 ): Promise<RenderedSheet> {
   root.render(
@@ -112,7 +121,7 @@ export type IdCardProgress = {
 };
 
 export async function downloadIdCardsPdf(
-  applications: AdminApplication[],
+  applications: Application[],
   onProgress?: (progress: IdCardProgress) => void,
 ): Promise<void> {
   if (applications.length === 0) {
@@ -138,11 +147,7 @@ export async function downloadIdCardsPdf(
   const ROW_GAP = 4;
 
   // Reuse a single off-screen host + React root across every card.
-  const host = document.createElement("div");
-  host.className = "id-card-capture-host id-card-print-root";
-  host.style.setProperty("--ic-mm", `${mmToPx(1)}px`);
-  host.style.display = "inline-block";
-  document.body.appendChild(host);
+  const host = createCaptureHost();
   const root = createRoot(host);
 
   let cursorY = PAGE_MARGIN;
@@ -187,5 +192,48 @@ export async function downloadIdCardsPdf(
 
   if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
     console.info(`ID cards exported at ${ID_CARD_PDF_DPI * CAPTURE_SCALE} DPI (card strip only)`);
+  }
+}
+
+function safeFileSlug(value: string): string {
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 40) || "intern"
+  );
+}
+
+/**
+ * Generates a single student's ID card as a PDF sized exactly to the
+ * front + back strip (no empty A4 margins) — ideal for a self-service
+ * download from the student portal.
+ */
+export async function downloadStudentIdCardPdf(application: Application): Promise<void> {
+  const assets = await loadIdCardAssets();
+
+  const host = createCaptureHost();
+  const root = createRoot(host);
+
+  try {
+    const { canvas, widthMm, heightMm } = await renderSheetCanvas(host, root, application, assets);
+
+    const { jsPDF } = await import("jspdf");
+    const pdf = new jsPDF({
+      orientation: widthMm >= heightMm ? "landscape" : "portrait",
+      unit: "mm",
+      format: [widthMm, heightMm],
+      compress: true,
+    });
+
+    const imgData = canvas.toDataURL("image/png", 1);
+    pdf.addImage(imgData, "PNG", 0, 0, widthMm, heightMm, undefined, "FAST");
+
+    const slug = safeFileSlug(application.internId?.trim() || application.fullName || "intern");
+    pdf.save(`id-card-${slug}.pdf`);
+  } finally {
+    root.unmount();
+    document.body.removeChild(host);
   }
 }

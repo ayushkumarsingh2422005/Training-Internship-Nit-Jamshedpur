@@ -25,6 +25,7 @@ function fallbackNoticesList(): PublicNotice[] {
     category: item.category,
     excerpt: item.excerpt,
     body: item.body,
+    pdfUrl: null,
     isNew: Boolean(item.isNew),
   }));
 }
@@ -65,6 +66,16 @@ export default async function NoticesPage({ searchParams }: PageProps) {
                   <h2>{notice.title}</h2>
                   <p className="notice-excerpt">{notice.excerpt}</p>
                   <div className="notice-body">{notice.body}</div>
+                  {notice.pdfUrl ? (
+                    <a
+                      className="notice-pdf-link"
+                      href={notice.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      📄 Download attached PDF
+                    </a>
+                  ) : null}
                 </article>
               ))}
             </div>

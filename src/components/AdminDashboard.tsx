@@ -41,6 +41,7 @@ type AdminNotice = {
   category: NoticeCategory;
   excerpt: string;
   body: string;
+  pdfUrl: string | null;
   isNew: boolean;
   isPublished: boolean;
 };
@@ -52,6 +53,7 @@ type NoticeForm = {
   category: string;
   excerpt: string;
   body: string;
+  pdfUrl: string | null;
   isNew: boolean;
   isPublished: boolean;
 };
@@ -76,6 +78,7 @@ const DEFAULT_NOTICE_FORM: NoticeForm = {
   category: "General",
   excerpt: "",
   body: "",
+  pdfUrl: null,
   isNew: true,
   isPublished: true,
 };
@@ -125,6 +128,7 @@ export function AdminDashboard() {
   const [noticeLoading, setNoticeLoading] = useState(true);
   const [noticeError, setNoticeError] = useState<string | null>(null);
   const [noticeSaving, setNoticeSaving] = useState(false);
+  const [noticePdfUploading, setNoticePdfUploading] = useState(false);
   const [noticeForm, setNoticeForm] = useState<NoticeForm>(DEFAULT_NOTICE_FORM);
   const [selectedCategoryOption, setSelectedCategoryOption] = useState<string>(DEFAULT_NOTICE_FORM.category);
   const [customCategory, setCustomCategory] = useState("");
@@ -355,6 +359,29 @@ export function AdminDashboard() {
     }
   }
 
+  async function handleNoticePdfUpload(file: File) {
+    setNoticePdfUploading(true);
+    setNoticeError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await fetch("/api/admin/notices/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const json = (await response.json()) as { url?: string; error?: string };
+      if (!response.ok || !json.url) {
+        setNoticeError(json.error ?? "Failed to upload PDF.");
+        return;
+      }
+      setNoticeForm((prev) => ({ ...prev, pdfUrl: json.url ?? null }));
+    } catch {
+      setNoticeError("Network error while uploading PDF.");
+    } finally {
+      setNoticePdfUploading(false);
+    }
+  }
+
   async function saveNotice(event: React.FormEvent) {
     event.preventDefault();
     setNoticeSaving(true);
@@ -368,6 +395,7 @@ export function AdminDashboard() {
           selectedCategoryOption === "__custom__" ? customCategory.trim() : selectedCategoryOption.trim(),
         excerpt: noticeForm.excerpt,
         body: noticeForm.body,
+        pdfUrl: noticeForm.pdfUrl,
         isNew: noticeForm.isNew,
         isPublished: noticeForm.isPublished,
       };
@@ -400,6 +428,7 @@ export function AdminDashboard() {
       category: notice.category,
       excerpt: notice.excerpt,
       body: notice.body,
+      pdfUrl: notice.pdfUrl,
       isNew: notice.isNew,
       isPublished: notice.isPublished,
     });
@@ -855,6 +884,36 @@ export function AdminDashboard() {
                 required
               />
             </div>
+            <div className="form-field">
+              <label htmlFor="notice-pdf">Attach PDF (optional)</label>
+              <input
+                id="notice-pdf"
+                type="file"
+                accept="application/pdf,.pdf"
+                disabled={noticePdfUploading || noticeSaving}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleNoticePdfUpload(file);
+                  e.target.value = "";
+                }}
+              />
+              {noticePdfUploading ? <span className="admin-muted">Uploading PDF…</span> : null}
+              {noticeForm.pdfUrl ? (
+                <div className="admin-notice-pdf-row">
+                  <a href={noticeForm.pdfUrl} target="_blank" rel="noopener noreferrer">
+                    View attached PDF
+                  </a>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setNoticeForm((prev) => ({ ...prev, pdfUrl: null }))}
+                    disabled={noticeSaving}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : null}
+            </div>
             <div className="admin-notice-checks">
               <label>
                 <input
@@ -874,7 +933,11 @@ export function AdminDashboard() {
               </label>
             </div>
             <div className="admin-filters-actions">
-              <button type="submit" className="btn btn-green btn-sm" disabled={noticeSaving}>
+              <button
+                type="submit"
+                className="btn btn-green btn-sm"
+                disabled={noticeSaving || noticePdfUploading}
+              >
                 {noticeSaving ? "Saving..." : noticeForm.id ? "Update notice" : "Create notice"}
               </button>
               <button
@@ -925,6 +988,7 @@ export function AdminDashboard() {
                       <td>
                         {notice.isPublished ? "Published" : "Draft"}
                         {notice.isNew ? " • New" : ""}
+                        {notice.pdfUrl ? " • PDF" : ""}
                       </td>
                       <td>
                         <div className="admin-row-actions">
