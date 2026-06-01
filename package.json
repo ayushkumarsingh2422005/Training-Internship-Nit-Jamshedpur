@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "node server.js",
     "lint": "next lint",
     "db:seed": "tsx scripts/seed-mongodb.ts",
     "db:seed:reset": "tsx scripts/seed-mongodb.ts --reset",
@@ -20,7 +20,8 @@
     "next": "^16.0.0",
     "nextjs-toploader": "^3.9.17",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "@types/jsbarcode": "^3.11.4",
