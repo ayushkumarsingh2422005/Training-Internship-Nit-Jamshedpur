@@ -125,6 +125,18 @@ function classifyPayload(parsedBody: ParsedBody, binaryInfo: PayloadInfo["binary
   return "unknown";
 }
 
+function fkAckResponse(payloadType: string) {
+  const body = payloadType === "attendance-event" ? "result=OK" : "OK";
+  return new Response(body, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-store",
+      Connection: "close",
+    },
+  });
+}
+
 async function readPayload(request: Request): Promise<PayloadInfo> {
   const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
   const bytes = new Uint8Array(await request.arrayBuffer());
@@ -219,13 +231,7 @@ async function handleWebhook(request: Request) {
     }
 
     if (request.method === "POST") {
-      return new Response("OK", {
-        status: 200,
-        headers: {
-          "Content-Type": "text/plain; charset=utf-8",
-          "Cache-Control": "no-store",
-        },
-      });
+      return fkAckResponse(payloadType);
     }
 
     return NextResponse.json({
