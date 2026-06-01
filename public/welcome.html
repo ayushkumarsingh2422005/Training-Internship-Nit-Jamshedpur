@@ -21,6 +21,7 @@
       --cream: #f7f4ec;
       --ink: #142117;
       --muted: #5d6b60;
+      --section-gap: clamp(8px, 1.15vmin, 13px);
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -68,9 +69,9 @@
     .stage::after {
       content: "";
       position: absolute;
-      inset: 2.1% 1.6%;
-      border: 2px solid rgba(244, 183, 64, 0.45);
-      border-radius: 14px;
+      inset: clamp(5px, 0.75vmin, 9px);
+      border: 2px solid rgba(244, 183, 64, 0.55);
+      border-radius: 10px;
       pointer-events: none;
     }
 
@@ -80,21 +81,21 @@
       height: 100%;
       display: grid;
       grid-template-rows: auto minmax(0, 1fr) auto;
-      padding: 2.4% 3.4%;
+      padding: clamp(12px, 2vmin, 22px) clamp(14px, 2.2vmin, 24px) clamp(14px, 2.2vmin, 24px);
     }
 
     /* ---------- Header ---------- */
     .top {
       display: flex;
       align-items: center;
-      gap: clamp(8px, 1.1vmin, 14px);
+      gap: clamp(10px, 1.4vmin, 16px);
       border-bottom: 1px solid rgba(255, 255, 255, 0.16);
-      padding-bottom: 1.2%;
+      padding: clamp(8px, 1.4vmin, 14px) 0 clamp(10px, 1.6vmin, 16px);
     }
 
     .crest {
-      width: clamp(58px, 7vmin, 86px);
-      height: clamp(58px, 7vmin, 86px);
+      width: clamp(72px, 9.5vmin, 108px);
+      height: clamp(72px, 9.5vmin, 108px);
       aspect-ratio: 1 / 1;
       background: transparent;
       border: none;
@@ -133,16 +134,17 @@
     }
     .top-text h1 {
       font-family: "Playfair Display", serif;
-      font-size: clamp(30px, 4.7vmin, 54px);
-      line-height: 0.98;
+      font-size: clamp(28px, 4.2vmin, 50px);
+      line-height: 1.02;
       font-weight: 800;
-      margin-top: 0.05em;
+      margin-top: 0.12em;
     }
     .top-text p {
-      font-size: clamp(13px, 1.9vmin, 23px);
+      font-size: clamp(12px, 1.65vmin, 20px);
       color: rgba(255, 255, 255, 0.82);
-      margin-top: 0.25em;
+      margin-top: 0.35em;
       font-weight: 500;
+      line-height: 1.35;
     }
     .top .session {
       margin-left: auto;
@@ -161,28 +163,34 @@
     /* ---------- Body ---------- */
     .body {
       display: grid;
-      grid-template-columns: 1.2fr 0.9fr;
-      gap: clamp(14px, 2vmin, 24px);
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: clamp(14px, 2vmin, 22px);
       align-items: start;
-      padding-top: clamp(10px, 1.6vmin, 20px);
+      padding: var(--section-gap) 0;
       min-height: 0;
     }
 
-    .welcome .hi { display: none; }
+    .welcome {
+      display: flex;
+      flex-direction: column;
+      gap: var(--section-gap);
+      min-height: 0;
+    }
+
     .welcome h2 {
       font-family: "Playfair Display", serif;
       color: #fff;
-      font-size: clamp(58px, 8.1vmin, 92px);
-      line-height: 0.95;
+      font-size: clamp(48px, 6.8vmin, 78px);
+      line-height: 0.98;
       font-weight: 800;
-      margin: 0 0 clamp(8px, 1.4vmin, 14px);
+      margin: 0;
       text-shadow: 0 6px 30px rgba(0, 0, 0, 0.4);
     }
-    .welcome h2 .accent { color: var(--gold); }
+    .welcome h2 .accent { color: var(--gold); display: block; margin-top: 0.06em; }
     .welcome .lead {
       color: rgba(255, 255, 255, 0.9);
-      font-size: clamp(22px, 2.4vmin, 31px);
-      line-height: 1.35;
+      font-size: clamp(18px, 2.05vmin, 26px);
+      line-height: 1.45;
       max-width: 100%;
       font-weight: 500;
     }
@@ -190,8 +198,8 @@
     .facts {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: clamp(8px, 1vmin, 12px);
-      margin-top: clamp(12px, 1.8vmin, 18px);
+      gap: clamp(8px, 1vmin, 11px);
+      margin: 0;
     }
     .fact {
       background: rgba(255, 255, 255, 0.08);
@@ -203,6 +211,41 @@
     }
     .fact b { display: block; color: #fff; font-size: clamp(23px, 2.3vmin, 28px); font-weight: 800; line-height: 1; }
     .fact span { color: rgba(255, 255, 255, 0.72); font-size: clamp(14px, 1.35vmin, 16px); letter-spacing: 0.04em; }
+
+    .highlights {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 12px;
+      padding: clamp(10px, 1.2vmin, 14px) clamp(12px, 1.4vmin, 16px);
+    }
+    .highlights h3 {
+      font-size: clamp(13px, 1.35vmin, 16px);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 700;
+      margin-bottom: clamp(6px, 0.8vmin, 10px);
+    }
+    .highlights ul {
+      list-style: none;
+      display: grid;
+      gap: clamp(4px, 0.55vmin, 7px);
+    }
+    .highlights li {
+      position: relative;
+      padding-left: 1.1em;
+      color: rgba(255, 255, 255, 0.88);
+      font-size: clamp(13px, 1.35vmin, 16px);
+      line-height: 1.35;
+      font-weight: 500;
+    }
+    .highlights li::before {
+      content: "▸";
+      position: absolute;
+      left: 0;
+      color: var(--gold);
+      font-weight: 700;
+    }
 
     /* ---------- Director card ---------- */
     .director {
@@ -222,7 +265,7 @@
     }
     .director .photo-wrap {
       width: 100%;
-      height: clamp(220px, 34vmin, 360px);
+      height: clamp(200px, 30vmin, 320px);
       border-radius: 12px;
       overflow: hidden;
       border: 2px solid rgba(26, 92, 40, 0.55);
@@ -279,8 +322,8 @@
       gap: clamp(10px, 1.6vmin, 18px);
       color: rgba(255, 255, 255, 0.82);
       border-top: 1px solid rgba(255, 255, 255, 0.16);
-      padding-top: clamp(8px, 1vmin, 12px);
-      font-size: clamp(13px, 1.25vmin, 16px);
+      padding: clamp(10px, 1.4vmin, 16px) 0 clamp(12px, 1.8vmin, 20px);
+      font-size: clamp(12px, 1.15vmin, 15px);
       white-space: nowrap;
       overflow: hidden;
     }
@@ -325,7 +368,7 @@
       <!-- Body -->
       <main class="body">
         <section class="welcome">
-          <h2>Welcome to<br /><span class="accent">NIT Jamshedpur</span></h2>
+          <h2>Welcome to <span class="accent">NIT Jamshedpur</span></h2>
           <p class="lead">
             A structured, residential skill-development &amp; internship programme bridging classroom learning with
             real-world technical practice for diploma students of Government Polytechnics across Jharkhand.
@@ -336,6 +379,16 @@
             <div class="fact"><b>1 June 2026</b><span>Training commences</span></div>
             <div class="fact"><b>80%+</b><span>Biometric attendance</span></div>
             <div class="fact"><b>Certified</b><span>by NIT Jamshedpur</span></div>
+          </div>
+
+          <div class="highlights">
+            <h3>Program Highlights</h3>
+            <ul>
+              <li>On-field training, classroom sessions &amp; laboratory work at NIT Jamshedpur</li>
+              <li>Workshops, seminars, short projects &amp; internal assessments</li>
+              <li>Training completion certificate awarded on successful completion</li>
+              <li>Open to diploma students of Government Polytechnics across Jharkhand</li>
+            </ul>
           </div>
         </section>
 

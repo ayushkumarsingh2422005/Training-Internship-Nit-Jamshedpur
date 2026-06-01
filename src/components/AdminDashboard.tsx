@@ -7,6 +7,7 @@ import type { NoticeCategory } from "@/lib/notices";
 import { AdminAttendance } from "@/components/AdminAttendance";
 import { useTopLoading } from "@/components/TopLoadingProvider";
 import { downloadIdCardsPdf, type IdCardProgress } from "@/lib/id-card-pdf";
+import { COLLEGE_DROPDOWN_OPTIONS, COLLEGE_OTHER } from "@/lib/government-colleges";
 
 type AppliedFilters = {
   q: string;
@@ -58,6 +59,23 @@ type NoticeForm = {
   isPublished: boolean;
 };
 
+type StudentForm = {
+  id: string | null;
+  fullName: string;
+  fatherName: string;
+  schoolName: string;
+  address: string;
+  phoneNumber: string;
+  email: string;
+  subject: string;
+  subpart: string;
+  wantsAccommodation: "unset" | "yes" | "no";
+  gender: "" | "Male" | "Female" | "Other";
+  aadharNumber: string;
+  collegeRegistrationNumber: string;
+  hasLaptop: "unset" | "yes" | "no";
+};
+
 const LIMIT = 50;
 const NOTICE_CATEGORY_OPTIONS = [
   "General",
@@ -82,6 +100,22 @@ const DEFAULT_NOTICE_FORM: NoticeForm = {
   isNew: true,
   isPublished: true,
 };
+const DEFAULT_STUDENT_FORM: StudentForm = {
+  id: null,
+  fullName: "",
+  fatherName: "",
+  schoolName: "",
+  address: "",
+  phoneNumber: "",
+  email: "",
+  subject: "",
+  subpart: "",
+  wantsAccommodation: "unset",
+  gender: "",
+  aadharNumber: "",
+  collegeRegistrationNumber: "",
+  hasLaptop: "unset",
+};
 
 function hostelLabel(app: AdminApplication): string {
   if (app.wantsAccommodation === true) {
@@ -95,6 +129,37 @@ function laptopLabel(app: AdminApplication): string {
   if (app.hasLaptop === true) return "Yes";
   if (app.hasLaptop === false) return "No";
   return "—";
+}
+
+function boolToSelect(value: boolean | null | undefined): "unset" | "yes" | "no" {
+  if (value === true) return "yes";
+  if (value === false) return "no";
+  return "unset";
+}
+
+function selectToBool(value: "unset" | "yes" | "no"): boolean | null {
+  if (value === "yes") return true;
+  if (value === "no") return false;
+  return null;
+}
+
+function studentFormFromApplication(app: AdminApplication): StudentForm {
+  return {
+    id: app.id,
+    fullName: app.fullName,
+    fatherName: app.fatherName,
+    schoolName: app.schoolName,
+    address: app.address,
+    phoneNumber: app.phoneNumber,
+    email: app.email,
+    subject: app.subject,
+    subpart: app.subpart,
+    wantsAccommodation: boolToSelect(app.wantsAccommodation),
+    gender: (app.gender as StudentForm["gender"]) || "",
+    aadharNumber: app.aadharNumber || "",
+    collegeRegistrationNumber: app.collegeRegistrationNumber || "",
+    hasLaptop: boolToSelect(app.hasLaptop),
+  };
 }
 
 export function AdminDashboard() {
@@ -132,10 +197,26 @@ export function AdminDashboard() {
   const [noticeForm, setNoticeForm] = useState<NoticeForm>(DEFAULT_NOTICE_FORM);
   const [selectedCategoryOption, setSelectedCategoryOption] = useState<string>(DEFAULT_NOTICE_FORM.category);
   const [customCategory, setCustomCategory] = useState("");
+  const [studentForm, setStudentForm] = useState<StudentForm>(DEFAULT_STUDENT_FORM);
+  const [studentSaving, setStudentSaving] = useState(false);
+  const [studentCollegeOption, setStudentCollegeOption] = useState<string>("");
+  const [studentCollegeCustom, setStudentCollegeCustom] = useState("");
+  const [bulkInput, setBulkInput] = useState("");
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [showStudentModal, setShowStudentModal] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [applicationMessage, setApplicationMessage] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<"applications" | "notices" | "attendance">("applications");
 
   useTopLoading(
-    loading || noticeLoading || noticeSaving || deletingApplicationId !== null || csvExporting || idCardsExporting,
+    loading ||
+      noticeLoading ||
+      noticeSaving ||
+      studentSaving ||
+      bulkSaving ||
+      deletingApplicationId !== null ||
+      csvExporting ||
+      idCardsExporting,
   );
 
   const load = useCallback(async () => {
@@ -201,6 +282,17 @@ export function AdminDashboard() {
   useEffect(() => {
     void loadNotices();
   }, [loadNotices]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      if (showStudentModal) setShowStudentModal(false);
+      if (showBulkModal) setShowBulkModal(false);
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showStudentModal, showBulkModal]);
 
   function handleSearch(event: React.FormEvent) {
     event.preventDefault();
@@ -359,6 +451,180 @@ export function AdminDashboard() {
     }
   }
 
+  function resetStudentForm() {
+    setStudentForm(DEFAULT_STUDENT_FORM);
+    setStudentCollegeOption(COLLEGE_DROPDOWN_OPTIONS[0]);
+    setStudentCollegeCustom("");
+  }
+
+  async function saveStudentApplication(event: React.FormEvent) {
+    event.preventDefault();
+    setStudentSaving(true);
+    setError(null);
+    setApplicationMessage(null);
+    try {
+      const selectedCollege = studentCollegeOption.trim();
+      const collegeName =
+        selectedCollege === COLLEGE_OTHER ? studentCollegeCustom.trim() : selectedCollege;
+      if (!collegeName) {
+        setError("Please select a college from dropdown.");
+        return;
+      }
+
+      const payload = {
+        fullName: studentForm.fullName,
+        fatherName: studentForm.fatherName,
+        schoolName: studentForm.schoolName,
+        collegeName,
+        address: studentForm.address,
+        phoneNumber: studentForm.phoneNumber,
+        email: studentForm.email,
+        subject: studentForm.subject,
+        subpart: studentForm.subpart,
+        wantsAccommodation: selectToBool(studentForm.wantsAccommodation),
+        gender: studentForm.gender || null,
+        aadharNumber: studentForm.aadharNumber || null,
+        collegeRegistrationNumber: studentForm.collegeRegistrationNumber || null,
+        hasLaptop: selectToBool(studentForm.hasLaptop),
+      };
+      const response = await fetch("/api/admin/applications", {
+        method: studentForm.id ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          studentForm.id
+            ? { id: studentForm.id, application: payload }
+            : { application: payload },
+        ),
+      });
+      const json = (await response.json()) as { error?: string };
+      if (response.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
+      if (!response.ok) {
+        setError(json.error ?? "Failed to save application.");
+        return;
+      }
+      setApplicationMessage(studentForm.id ? "Application updated successfully." : "Student added successfully.");
+      resetStudentForm();
+      setShowStudentModal(false);
+      await load();
+    } catch {
+      setError("Network error while saving application.");
+    } finally {
+      setStudentSaving(false);
+    }
+  }
+
+  function parseBulkInput(text: string): Array<Record<string, string>> {
+    const trimmed = text.trim();
+    if (!trimmed) return [];
+
+    if (trimmed.startsWith("[")) {
+      const parsed = JSON.parse(trimmed) as unknown;
+      if (!Array.isArray(parsed)) {
+        throw new Error("JSON bulk input must be an array.");
+      }
+      return parsed.map((row) => (typeof row === "object" && row ? (row as Record<string, string>) : {}));
+    }
+
+    const rows = trimmed
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (rows.length < 2) {
+      throw new Error("CSV bulk input must include a header and at least one row.");
+    }
+
+    const splitLine = (line: string): string[] => {
+      const out: string[] = [];
+      let current = "";
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i += 1) {
+        const char = line[i];
+        if (char === "\"") {
+          if (inQuotes && line[i + 1] === "\"") {
+            current += "\"";
+            i += 1;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === "," && !inQuotes) {
+          out.push(current.trim());
+          current = "";
+        } else {
+          current += char;
+        }
+      }
+      out.push(current.trim());
+      return out;
+    };
+
+    const headers = splitLine(rows[0]).map((value) => value.toLowerCase());
+    return rows.slice(1).map((line) => {
+      const cols = splitLine(line);
+      const row: Record<string, string> = {};
+      headers.forEach((header, index) => {
+        row[header] = cols[index] ?? "";
+      });
+      return row;
+    });
+  }
+
+  async function saveBulkApplications(event: React.FormEvent) {
+    event.preventDefault();
+    setBulkSaving(true);
+    setError(null);
+    setApplicationMessage(null);
+    try {
+      const rows = parseBulkInput(bulkInput);
+      if (!rows.length) {
+        setError("Bulk input is empty.");
+        return;
+      }
+      const applications = rows.map((row) => ({
+        fullName: row.fullname ?? row.full_name ?? "",
+        fatherName: row.fathername ?? row.father_name ?? "",
+        schoolName: row.schoolname ?? row.school_name ?? "",
+        collegeName: row.collegename ?? row.college_name ?? "",
+        address: row.address ?? "",
+        phoneNumber: row.phonenumber ?? row.phone ?? row.mobile ?? "",
+        email: row.email ?? "",
+        subject: row.subject ?? row.branch ?? "",
+        subpart: row.subpart ?? row.module ?? "",
+        wantsAccommodation: row.wantsaccommodation ?? row.hostel ?? "",
+        gender: row.gender ?? "",
+        aadharNumber: row.aadharnumber ?? row.aadhar ?? "",
+        collegeRegistrationNumber: row.collegeregistrationnumber ?? row.registrationnumber ?? "",
+        hasLaptop: row.haslaptop ?? row.laptop ?? "",
+      }));
+
+      const response = await fetch("/api/admin/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ applications }),
+      });
+      const json = (await response.json()) as { error?: string; created?: number };
+      if (response.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
+      if (!response.ok) {
+        setError(json.error ?? "Failed to bulk add applications.");
+        return;
+      }
+      setBulkInput("");
+      setApplicationMessage(`Bulk add complete: ${json.created ?? applications.length} students added.`);
+      setShowBulkModal(false);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to parse bulk input.");
+    } finally {
+      setBulkSaving(false);
+    }
+  }
+
   async function handleNoticePdfUpload(file: File) {
     setNoticePdfUploading(true);
     setNoticeError(null);
@@ -464,6 +730,8 @@ export function AdminDashboard() {
   }
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 1;
+  const subjectOptions = Array.from(new Set([...(data?.filters.subjects ?? []), studentForm.subject].filter(Boolean)));
+  const subpartOptions = Array.from(new Set([...(data?.filters.subparts ?? []), studentForm.subpart].filter(Boolean)));
 
   return (
     <div className="admin-dashboard">
@@ -538,6 +806,304 @@ export function AdminDashboard() {
           <div className="admin-stat-card">
             <span className="admin-stat-value">{data.stats.laptopUnset}</span>
             <span className="admin-stat-label">Laptop: Not set</span>
+          </div>
+        </div>
+      ) : null}
+
+      {activeSection === "applications" ? (
+        <div className="admin-application-toolbar">
+          <button
+            type="button"
+            className="btn btn-green btn-sm"
+            onClick={() => {
+              resetStudentForm();
+              setStudentCollegeOption(COLLEGE_DROPDOWN_OPTIONS[0]);
+              setApplicationMessage(null);
+              setShowStudentModal(true);
+            }}
+          >
+            Add student
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              setApplicationMessage(null);
+              setShowBulkModal(true);
+            }}
+          >
+            Bulk add
+          </button>
+        </div>
+      ) : null}
+
+      {activeSection === "applications" && applicationMessage ? (
+        <p className="admin-success" role="status">
+          {applicationMessage}
+        </p>
+      ) : null}
+
+      {activeSection === "applications" && showStudentModal ? (
+        <div className="admin-modal-backdrop" onClick={() => setShowStudentModal(false)}>
+          <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <h2 className="admin-subhead">
+                {studentForm.id ? "Edit application" : "Add student to database"}
+              </h2>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setShowStudentModal(false)}
+                disabled={studentSaving}
+              >
+                Close
+              </button>
+            </div>
+            <form className="admin-modal-body" onSubmit={saveStudentApplication}>
+              <div className="admin-form-grid-two">
+                <div className="form-field">
+                  <label htmlFor="student-fullName">Full name</label>
+                  <input
+                    id="student-fullName"
+                    value={studentForm.fullName}
+                    onChange={(e) => setStudentForm((prev) => ({ ...prev, fullName: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="student-fatherName">Father / guardian</label>
+                  <input
+                    id="student-fatherName"
+                    value={studentForm.fatherName}
+                    onChange={(e) => setStudentForm((prev) => ({ ...prev, fatherName: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="student-schoolName">School</label>
+                  <input
+                    id="student-schoolName"
+                    value={studentForm.schoolName}
+                    onChange={(e) => setStudentForm((prev) => ({ ...prev, schoolName: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="student-collegeName">College</label>
+                  <select
+                    id="student-collegeName"
+                    value={studentCollegeOption}
+                    onChange={(e) => setStudentCollegeOption(e.target.value)}
+                    required
+                  >
+                    <option value="">Select college</option>
+                    {COLLEGE_DROPDOWN_OPTIONS.map((college) => (
+                      <option key={college} value={college}>
+                        {college}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {studentCollegeOption === COLLEGE_OTHER ? (
+                  <div className="form-field">
+                    <label htmlFor="student-other-college">Other college name</label>
+                    <input
+                      id="student-other-college"
+                      value={studentCollegeCustom}
+                      onChange={(e) => setStudentCollegeCustom(e.target.value)}
+                      required
+                    />
+                  </div>
+                ) : null}
+                <div className="form-field">
+                  <label htmlFor="student-subject">Branch</label>
+                  <select
+                    id="student-subject"
+                    value={studentForm.subject}
+                    onChange={(e) => setStudentForm((prev) => ({ ...prev, subject: e.target.value }))}
+                    required
+                  >
+                    <option value="">Select branch</option>
+                    {subjectOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label htmlFor="student-subpart">Module</label>
+                  <select
+                    id="student-subpart"
+                    value={studentForm.subpart}
+                    onChange={(e) => setStudentForm((prev) => ({ ...prev, subpart: e.target.value }))}
+                    required
+                  >
+                    <option value="">Select module</option>
+                    {subpartOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label htmlFor="student-email">Email</label>
+                  <input
+                    id="student-email"
+                    type="email"
+                    value={studentForm.email}
+                    onChange={(e) => setStudentForm((prev) => ({ ...prev, email: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="student-phone">Phone number</label>
+                  <input
+                    id="student-phone"
+                    value={studentForm.phoneNumber}
+                    onChange={(e) => setStudentForm((prev) => ({ ...prev, phoneNumber: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="student-hostel">Hostel</label>
+                  <select
+                    id="student-hostel"
+                    value={studentForm.wantsAccommodation}
+                    onChange={(e) =>
+                      setStudentForm((prev) => ({
+                        ...prev,
+                        wantsAccommodation: e.target.value as StudentForm["wantsAccommodation"],
+                      }))
+                    }
+                  >
+                    <option value="unset">Not set</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label htmlFor="student-gender">Gender</label>
+                  <select
+                    id="student-gender"
+                    value={studentForm.gender}
+                    onChange={(e) =>
+                      setStudentForm((prev) => ({ ...prev, gender: e.target.value as StudentForm["gender"] }))
+                    }
+                  >
+                    <option value="">Not set</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label htmlFor="student-laptop">Laptop</label>
+                  <select
+                    id="student-laptop"
+                    value={studentForm.hasLaptop}
+                    onChange={(e) =>
+                      setStudentForm((prev) => ({
+                        ...prev,
+                        hasLaptop: e.target.value as StudentForm["hasLaptop"],
+                      }))
+                    }
+                  >
+                    <option value="unset">Not set</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label htmlFor="student-aadhar">Aadhaar (optional)</label>
+                  <input
+                    id="student-aadhar"
+                    value={studentForm.aadharNumber}
+                    onChange={(e) => setStudentForm((prev) => ({ ...prev, aadharNumber: e.target.value }))}
+                  />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="student-registration">College registration no. (optional)</label>
+                  <input
+                    id="student-registration"
+                    value={studentForm.collegeRegistrationNumber}
+                    onChange={(e) =>
+                      setStudentForm((prev) => ({ ...prev, collegeRegistrationNumber: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="form-field admin-field-full">
+                  <label htmlFor="student-address">Address</label>
+                  <textarea
+                    id="student-address"
+                    rows={2}
+                    value={studentForm.address}
+                    onChange={(e) => setStudentForm((prev) => ({ ...prev, address: e.target.value }))}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="admin-filters-actions">
+                <button type="submit" className="btn btn-green btn-sm" disabled={studentSaving || bulkSaving}>
+                  {studentSaving ? "Saving..." : studentForm.id ? "Update application" : "Add student"}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={resetStudentForm}
+                  disabled={studentSaving || bulkSaving}
+                >
+                  Reset form
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {activeSection === "applications" && showBulkModal ? (
+        <div className="admin-modal-backdrop" onClick={() => setShowBulkModal(false)}>
+          <div className="admin-modal admin-modal-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <h2 className="admin-subhead">Bulk add students</h2>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setShowBulkModal(false)}
+                disabled={bulkSaving}
+              >
+                Close
+              </button>
+            </div>
+            <form className="admin-modal-body" onSubmit={saveBulkApplications}>
+              <p className="admin-muted">
+                Paste CSV (header + rows) or JSON array. Intern IDs are auto-generated.
+              </p>
+              <div className="form-field">
+                <label htmlFor="admin-bulk-input">Bulk input</label>
+                <textarea
+                  id="admin-bulk-input"
+                  rows={10}
+                  value={bulkInput}
+                  placeholder="CSV header example: fullName,fatherName,schoolName,collegeName,address,phoneNumber,email,subject,subpart"
+                  onChange={(e) => setBulkInput(e.target.value)}
+                />
+              </div>
+              <div className="admin-filters-actions">
+                <button type="submit" className="btn btn-green btn-sm" disabled={studentSaving || bulkSaving}>
+                  {bulkSaving ? "Adding..." : "Bulk add"}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setBulkInput("")}
+                  disabled={studentSaving || bulkSaving}
+                >
+                  Clear bulk input
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       ) : null}
@@ -714,6 +1280,24 @@ export function AdminDashboard() {
                       <td>{laptopLabel(app)}</td>
                       <td>
                         <div className="admin-row-actions">
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => {
+                              setStudentForm(studentFormFromApplication(app));
+                              if ((COLLEGE_DROPDOWN_OPTIONS as readonly string[]).includes(app.collegeName)) {
+                                setStudentCollegeOption(app.collegeName);
+                                setStudentCollegeCustom("");
+                              } else {
+                                setStudentCollegeOption(COLLEGE_OTHER);
+                                setStudentCollegeCustom(app.collegeName);
+                              }
+                              setApplicationMessage(null);
+                              setShowStudentModal(true);
+                            }}
+                          >
+                            Edit
+                          </button>
                           <button
                             type="button"
                             className="btn btn-secondary btn-sm"
