@@ -4,7 +4,8 @@ const { parse: parseUrl } = require("node:url");
 const next = require("next");
 const { WebSocketServer } = require("ws");
 
-const dev = process.env.NODE_ENV !== "production";
+// Default to production unless explicitly running local development.
+const dev = process.env.NODE_ENV === "development";
 const hostname = process.env.HOST || "0.0.0.0";
 const port = Number(process.env.PORT || 3000);
 const wsPath = "/api/biometric-ws";
