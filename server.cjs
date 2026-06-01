@@ -5,7 +5,7 @@ const next = require("next");
 const { WebSocketServer } = require("ws");
 
 const dev = process.env.NODE_ENV !== "production";
-const hostname = process.env.HOSTNAME || "0.0.0.0";
+const hostname = process.env.HOST || "0.0.0.0";
 const port = Number(process.env.PORT || 3000);
 const wsPath = "/api/biometric-ws";
 
