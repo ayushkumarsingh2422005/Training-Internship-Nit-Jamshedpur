@@ -24,6 +24,34 @@ function slicePreview(value: string, maxChars = 500) {
   return value.length > maxChars ? `${value.slice(0, maxChars)}...(truncated)` : value;
 }
 
+function classifyPayload(parsedBody: ParsedBody, binaryInfo: PayloadInfo["binaryInfo"]) {
+  const raw = binaryInfo?.utf8WithoutNullPreview
+    ?? (typeof parsedBody === "string" ? parsedBody : JSON.stringify(parsedBody ?? {}));
+  const normalized = raw.toLowerCase();
+
+  if (
+    normalized.includes("supported_enroll_data")
+    || normalized.includes("fk_bin_data_lib")
+    || normalized.includes("firmware")
+  ) {
+    return "device-info";
+  }
+
+  if (
+    normalized.includes("punch")
+    || normalized.includes("attendance")
+    || normalized.includes("checkin")
+    || normalized.includes("checkout")
+    || normalized.includes("verify")
+    || normalized.includes("logtime")
+    || normalized.includes("userid")
+  ) {
+    return "attendance-event";
+  }
+
+  return "unknown";
+}
+
 async function readPayload(request: Request): Promise<PayloadInfo> {
   const contentType = request.headers.get("content-type")?.toLowerCase() ?? "";
   const bytes = new Uint8Array(await request.arrayBuffer());
@@ -77,6 +105,7 @@ async function handleWebhook(request: Request) {
     const headers = Object.fromEntries(request.headers.entries());
     const query = Object.fromEntries(request.url ? new URL(request.url).searchParams.entries() : []);
     const { rawBody, parsedBody, binaryInfo } = await readPayload(request);
+    const payloadType = classifyPayload(parsedBody, binaryInfo);
 
     console.log("Incoming webhook payload", {
       timestamp: new Date().toISOString(),
@@ -84,15 +113,27 @@ async function handleWebhook(request: Request) {
       url: request.url,
       headers,
       query,
+      payloadType,
       rawBody,
       parsedBody,
       binaryInfo,
     });
 
+    if (request.method === "POST") {
+      return new Response("OK", {
+        status: 200,
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+
     return NextResponse.json({
       ok: true,
-      message: "Webhook received and logged.",
+      message: "Webhook endpoint is live. POST is used for device pushes.",
       method: request.method,
+      payloadType,
     });
   } catch (error) {
     console.error("Webhook logging failed", error);
