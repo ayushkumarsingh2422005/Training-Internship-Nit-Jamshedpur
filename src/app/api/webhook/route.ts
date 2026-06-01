@@ -39,6 +39,11 @@ const INTERESTING_FIELD_NAMES = [
 
 let lastPayloadHash: string | null = null;
 let duplicateCount = 0;
+let mutedDeviceInfoCount = 0;
+let lastMutedDeviceInfoLogAt = 0;
+
+const LOG_DEVICE_INFO_DETAILS = false;
+const DEVICE_INFO_SUMMARY_INTERVAL_MS = 60_000;
 
 function toHexPreview(bytes: Uint8Array, maxBytes = 96) {
   return Array.from(bytes.slice(0, maxBytes))
@@ -203,8 +208,22 @@ async function handleWebhook(request: Request) {
     const { rawBody, parsedBody, payloadHash, binaryInfo } = await readPayload(request);
     const payloadType = classifyPayload(parsedBody, binaryInfo);
     const isDuplicate = payloadHash !== null && payloadHash === lastPayloadHash;
+    const shouldMuteDeviceInfo = payloadType === "device-info" && !LOG_DEVICE_INFO_DETAILS;
 
-    if (isDuplicate) {
+    if (shouldMuteDeviceInfo) {
+      mutedDeviceInfoCount += 1;
+      const now = Date.now();
+      if (now - lastMutedDeviceInfoLogAt >= DEVICE_INFO_SUMMARY_INTERVAL_MS) {
+        lastMutedDeviceInfoLogAt = now;
+        console.log("Incoming webhook payload (device-info muted)", {
+          timestamp: new Date().toISOString(),
+          method: request.method,
+          payloadType,
+          mutedDeviceInfoCount,
+          message: "Device is sending FKWeb heartbeat/device-info packets. Attendance events will still log normally.",
+        });
+      }
+    } else if (isDuplicate) {
       duplicateCount += 1;
       console.log("Incoming webhook payload (duplicate)", {
         timestamp: new Date().toISOString(),
