@@ -21,6 +21,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const isVercelRuntime = process.env.VERCEL === "1";
+
   return (
     <html lang="en" className={notoSans.variable} suppressHydrationWarning data-scroll-behavior="smooth">
       <body suppressHydrationWarning>
@@ -31,7 +33,7 @@ export default function RootLayout({
         <AppProviders>
           <ConditionalPageShell>{children}</ConditionalPageShell>
         </AppProviders>
-        <Analytics />
+        {isVercelRuntime ? <Analytics /> : null}
       </body>
     </html>
   );

@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Orientation Backdrop | NIT Jamshedpur</title>
+    <style>
+      :root {
+        --green-dark: #1b5e20;
+        --green: #2e7d32;
+        --yellow: #f9a825;
+        --ink: #f8fafc;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        padding: 20px;
+        display: grid;
+        place-items: center;
+        background: #e8f5e9;
+        font-family: "Noto Sans", Arial, sans-serif;
+      }
+
+      .banner-wrap {
+        width: min(1380px, 100%);
+        aspect-ratio: 16 / 9;
+        border-radius: 20px;
+        overflow: hidden;
+        position: relative;
+        background:
+          radial-gradient(circle at 14% 22%, rgba(249, 168, 37, 0.2), transparent 32%),
+          radial-gradient(circle at 84% 18%, rgba(249, 168, 37, 0.15), transparent 24%),
+          linear-gradient(135deg, #1b5e20 0%, #236c33 55%, #2e7d32 100%),
+          url("tech.png") center/cover no-repeat;
+        box-shadow: 0 20px 48px rgba(27, 94, 32, 0.3);
+      }
+
+      .banner-wrap::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(8, 18, 13, 0.26), rgba(7, 22, 10, 0.45));
+      }
+
+      .top-strip,
+      .bottom-strip,
+      .event-board {
+        position: absolute;
+        z-index: 3;
+      }
+
+      .top-strip {
+        top: 0;
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.96);
+        color: #111827;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 18px;
+        font-size: clamp(0.68rem, 0.85vw, 0.9rem);
+      }
+
+      .top-strip strong {
+        color: #1a3f7a;
+      }
+
+      .event-board {
+        left: 50%;
+        top: 52%;
+        transform: translate(-50%, -50%);
+        width: min(76%, 980px);
+        height: min(75%, 620px);
+        border-radius: 18px;
+        overflow: hidden;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        background: linear-gradient(155deg, #1d2f84 0%, #312e90 45%, #25217a 100%);
+        box-shadow:
+          0 18px 40px rgba(7, 12, 34, 0.45),
+          inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+      }
+
+      .board-top {
+        background: linear-gradient(180deg, #ffffff 0%, #f5f7ff 100%);
+        color: #1f2a60;
+        padding: 14px 26px 12px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .board-top img {
+        width: clamp(56px, 4.7vw, 80px);
+        height: clamp(56px, 4.7vw, 80px);
+        object-fit: contain;
+      }
+
+      .board-org {
+        text-align: center;
+      }
+
+      .board-org h2 {
+        margin: 0;
+        font-size: clamp(1.2rem, 2.2vw, 2rem);
+        letter-spacing: 0.02em;
+        line-height: 1.1;
+      }
+
+      .board-org p {
+        margin: 3px 0 0;
+        font-size: clamp(0.72rem, 1vw, 0.95rem);
+        font-weight: 600;
+      }
+
+      .board-main {
+        padding: clamp(16px, 2vw, 28px);
+        display: grid;
+        place-items: center;
+        text-align: center;
+        color: var(--ink);
+      }
+
+      .board-main h1 {
+        margin: 0;
+        font-size: clamp(2.4rem, 6.2vw, 5.8rem);
+        font-family: "Times New Roman", Georgia, serif;
+        font-weight: 700;
+        line-height: 0.95;
+        letter-spacing: 0.01em;
+      }
+
+      .program-line {
+        margin: 4px 0 0;
+        font-size: clamp(1.4rem, 3.3vw, 3rem);
+        letter-spacing: 0.09em;
+        font-weight: 800;
+      }
+
+      .course-line {
+        margin: 16px 0 0;
+        font-size: clamp(0.8rem, 1.1vw, 1.2rem);
+        letter-spacing: 0.02em;
+        opacity: 0.96;
+      }
+
+      .meta-line {
+        margin: 12px 0 0;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .meta-pill {
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        background: rgba(255, 255, 255, 0.12);
+        font-size: clamp(0.72rem, 0.92vw, 0.95rem);
+        font-weight: 700;
+      }
+
+      .meta-pill.gold {
+        background: var(--yellow);
+        color: #18181b;
+        border-color: rgba(0, 0, 0, 0.12);
+      }
+
+      .board-bottom {
+        padding: 12px 20px 14px;
+        color: #eef2ff;
+        text-align: center;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(0, 0, 0, 0.12));
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .board-date {
+        margin: 0;
+        font-size: clamp(0.86rem, 1.12vw, 1.14rem);
+        font-weight: 700;
+      }
+
+      .board-venue {
+        margin: 0;
+        font-size: clamp(0.78rem, 0.98vw, 1rem);
+        opacity: 0.95;
+      }
+
+      .bottom-strip {
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15, 62, 24, 0.95);
+        border-top: 1px solid rgba(255, 255, 255, 0.22);
+        padding: 9px 18px;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+        font-size: clamp(0.68rem, 0.88vw, 0.9rem);
+      }
+
+      .bottom-strip strong {
+        color: #ffeb99;
+      }
+
+      @media (max-width: 980px) {
+        .banner-wrap {
+          aspect-ratio: auto;
+          min-height: 92vh;
+        }
+
+        .top-strip {
+          position: static;
+        }
+
+        .bottom-strip {
+          position: static;
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="banner-wrap" role="img" aria-label="Stage style orientation backdrop for NIT Jamshedpur Industrial Training and Internship 2026">
+      <div class="top-strip">
+        <span><strong>NIT Jamshedpur Portal</strong> | Industrial Training & Internship 2026</span>
+        <span>Government of Jharkhand Initiative</span>
+      </div>
+
+      <section class="event-board">
+        <header class="board-top">
+          <img src="nitjsrlogo.png" alt="NIT Jamshedpur logo" />
+          <div class="board-org">
+            <h2>NIT JAMSHEDPUR</h2>
+            <p>in association with DHTE, Government of Jharkhand</p>
+          </div>
+          <img src="Jharkhand_Rajakiya_Chihna.svg" alt="Jharkhand emblem" />
+        </header>
+
+        <div class="board-main">
+          <div>
+            <h1>Orientation</h1>
+            <p class="program-line">PROGRAMME 2026</p>
+            <p class="course-line">Computer | Mechanical | Electrical | Civil | Workshop | Production</p>
+            <div class="meta-line">
+              <span class="meta-pill gold">1000+ Students</span>
+              <span class="meta-pill">10 Courses</span>
+              <span class="meta-pill">42 Days Residential</span>
+              <span class="meta-pill">80% Attendance Required</span>
+            </div>
+          </div>
+        </div>
+
+        <footer class="board-bottom">
+          <p class="board-date">1 June 2026 onwards</p>
+          <p class="board-venue">National Institute of Technology, Jamshedpur, Jharkhand - 831014</p>
+        </footer>
+      </section>
+
+      <footer class="bottom-strip">
+        <span><strong>Contact:</strong> internship@nitjsr.ac.in</span>
+        <span><strong>Email:</strong> dhte.jharkhand@gov.in</span>
+        <span><strong>Portal:</strong> NIT Jamshedpur Internship 2026</span>
+      </footer>
+    </main>
+  </body>
+</html>

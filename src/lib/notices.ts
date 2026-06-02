@@ -1,6 +1,7 @@
 import type { Notice as ContentNotice } from "@/lib/content";
 import connectDB from "@/lib/mongodb";
 import NoticeModel, { type NoticeDocument } from "@/models/Notice";
+import { extractNoticePdfFileName, NOTICE_PDF_URL_PREFIX } from "@/lib/notice-pdf-storage";
 
 export const NOTICE_CATEGORY_OPTIONS = [
   "General",
@@ -47,6 +48,9 @@ function toIsoDate(value: Date | string): string {
 }
 
 export function toPublicNotice(doc: NoticeDocument): PublicNotice {
+  const fileName = extractNoticePdfFileName(doc.pdfUrl);
+  const normalizedPdfUrl = fileName ? `${NOTICE_PDF_URL_PREFIX}${fileName}` : null;
+
   return {
     id: doc._id.toString(),
     title: doc.title,
@@ -54,7 +58,7 @@ export function toPublicNotice(doc: NoticeDocument): PublicNotice {
     category: doc.category as NoticeCategory,
     excerpt: doc.excerpt,
     body: doc.body,
-    pdfUrl: doc.pdfUrl?.trim() || null,
+    pdfUrl: normalizedPdfUrl,
     isNew: Boolean(doc.isNew),
   };
 }
