@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AccommodationEnrollment } from "@/components/AccommodationEnrollment";
-import { ApplicationFormDownload } from "@/components/ApplicationFormDownload";
 import { LaptopAvailabilityEnrollment } from "@/components/LaptopAvailabilityEnrollment";
 import { StudentAttendancePanel } from "@/components/StudentAttendancePanel";
 import { StudentProfileEditor } from "@/components/StudentProfileEditor";
@@ -24,7 +23,7 @@ type LookupState =
   | { status: "not-shortlisted" }
   | { status: "error"; message: string };
 
-type ProfileTab = "info" | "hostel" | "laptop" | "attendance" | "certificate" | "application-form";
+type ProfileTab = "info" | "hostel" | "laptop" | "attendance" | "certificate";
 
 export function ShortlistLookup() {
   const [email, setEmail] = useState("");
@@ -290,18 +289,6 @@ export function ShortlistLookup() {
               <button
                 type="button"
                 role="tab"
-                aria-selected={activeTab === "application-form"}
-                className={`profile-tab${activeTab === "application-form" ? " active" : ""}`}
-                onClick={() => setActiveTab("application-form")}
-              >
-                Application &amp; ID-Card
-                {!isProfileComplete(state.application) ? (
-                  <span className="profile-tab-badge pending">Pending</span>
-                ) : null}
-              </button>
-              <button
-                type="button"
-                role="tab"
                 aria-selected={activeTab === "certificate"}
                 className={`profile-tab${activeTab === "certificate" ? " active" : ""}`}
                 onClick={() => setActiveTab("certificate")}
@@ -324,10 +311,6 @@ export function ShortlistLookup() {
               ) : null}
 
               {activeTab === "attendance" ? <StudentAttendancePanel /> : null}
-
-              {activeTab === "application-form" ? (
-                <ApplicationFormDownload application={state.application} />
-              ) : null}
 
               {activeTab === "certificate" ? (
                 <div className="profile-result-placeholder">
