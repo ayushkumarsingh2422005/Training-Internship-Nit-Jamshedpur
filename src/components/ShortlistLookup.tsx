@@ -1,10 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { AccommodationEnrollment } from "@/components/AccommodationEnrollment";
-import { LaptopAvailabilityEnrollment } from "@/components/LaptopAvailabilityEnrollment";
 import { StudentAttendancePanel } from "@/components/StudentAttendancePanel";
-import { StudentProfileEditor } from "@/components/StudentProfileEditor";
 import {
   authHeaders,
   clearStudentSession,
@@ -12,7 +9,6 @@ import {
   saveStudentSession,
 } from "@/lib/student-session-client";
 import type { Application } from "@/types/application";
-import { isProfileComplete } from "@/lib/profile";
 import { useTopLoading } from "@/components/TopLoadingProvider";
 
 type LookupState =
@@ -23,7 +19,7 @@ type LookupState =
   | { status: "not-shortlisted" }
   | { status: "error"; message: string };
 
-type ProfileTab = "info" | "hostel" | "laptop" | "attendance" | "certificate";
+type ProfileTab = "info" | "attendance" | "certificate";
 
 export function ShortlistLookup() {
   const [email, setEmail] = useState("");
@@ -117,26 +113,10 @@ export function ShortlistLookup() {
     setState({ status: "idle" });
   }
 
-  function updateApplication(application: Application) {
-    setState({ status: "shortlisted", application });
-  }
-
   const showForm = !isLoggedIn && !isRestoring;
 
   useEffect(() => {
     if (state.status !== "shortlisted") return;
-    if (!isProfileComplete(state.application)) {
-      setActiveTab("info");
-      return;
-    }
-    if (state.application.wantsAccommodation == null) {
-      setActiveTab("hostel");
-      return;
-    }
-    if (state.application.hasLaptop == null) {
-      setActiveTab("laptop");
-      return;
-    }
     setActiveTab("info");
   }, [state]);
 
@@ -146,13 +126,13 @@ export function ShortlistLookup() {
         <header className="shortlist-lookup-header compact">
           <div className="shortlist-header-row">
             <div>
-              <h2 id="shortlist-lookup-title">Check shortlist, profile &amp; preferences</h2>
+              <h2 id="shortlist-lookup-title">Check shortlist, profile &amp; attendance</h2>
               {isLoggedIn ? (
-                <p>Signed in on this device. Use tabs to manage your profile, hostel preference, and laptop status.</p>
+                <p>Signed in on this device. Use tabs to view your profile info, attendance, and certificate section.</p>
               ) : (
                 <p>
-                  Enter the <strong>email and mobile</strong> from your application to view your result and enroll
-                  for hostel and laptop availability.
+                  Enter the <strong>email and mobile</strong> from your application to view shortlist status, profile
+                  info, attendance, and certificate section.
                 </p>
               )}
             </div>
@@ -253,29 +233,6 @@ export function ShortlistLookup() {
                 onClick={() => setActiveTab("info")}
               >
                 Profile Info
-                {!isProfileComplete(state.application) ? (
-                  <span className="profile-tab-badge pending">Pending</span>
-                ) : null}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === "hostel"}
-                className={`profile-tab${activeTab === "hostel" ? " active" : ""}`}
-                onClick={() => setActiveTab("hostel")}
-              >
-                Hostel Preference
-                {state.application.wantsAccommodation == null ? <span className="profile-tab-badge pending">Pending</span> : null}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === "laptop"}
-                className={`profile-tab${activeTab === "laptop" ? " active" : ""}`}
-                onClick={() => setActiveTab("laptop")}
-              >
-                Laptop Availability
-                {state.application.hasLaptop == null ? <span className="profile-tab-badge pending">Pending</span> : null}
               </button>
               <button
                 type="button"
@@ -299,15 +256,24 @@ export function ShortlistLookup() {
 
             <div className="profile-tab-panel">
               {activeTab === "info" ? (
-                <StudentProfileEditor application={state.application} onUpdated={updateApplication} />
-              ) : null}
-
-              {activeTab === "hostel" ? (
-                <AccommodationEnrollment application={state.application} onUpdated={updateApplication} />
-              ) : null}
-
-              {activeTab === "laptop" ? (
-                <LaptopAvailabilityEnrollment application={state.application} onUpdated={updateApplication} />
+                <div className="profile-result-placeholder">
+                  <h4>Profile Information</h4>
+                  <p>
+                    <strong>Name:</strong> {state.application.fullName}
+                    <br />
+                    <strong>Intern ID:</strong> {state.application.internId || "Not assigned"}
+                    <br />
+                    <strong>Email:</strong> {state.application.email}
+                    <br />
+                    <strong>Mobile:</strong> {state.application.phoneNumber}
+                    <br />
+                    <strong>College:</strong> {state.application.collegeName}
+                    <br />
+                    <strong>Branch:</strong> {state.application.subject}
+                    <br />
+                    <strong>Module:</strong> {state.application.subpart}
+                  </p>
+                </div>
               ) : null}
 
               {activeTab === "attendance" ? <StudentAttendancePanel /> : null}
@@ -315,10 +281,7 @@ export function ShortlistLookup() {
               {activeTab === "certificate" ? (
                 <div className="profile-result-placeholder">
                   <h4>Certificate section will be available here</h4>
-                  <p>
-                    This tab is reserved for certificate preview/download in future. Keep your profile details updated
-                    for correct certificate generation.
-                  </p>
+                  <p>This tab is reserved for certificate preview/download in future.</p>
                 </div>
               ) : null}
             </div>
