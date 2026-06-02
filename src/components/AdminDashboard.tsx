@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AdminApplication } from "@/lib/admin-application";
 import type { NoticeCategory } from "@/lib/notices";
@@ -206,12 +206,28 @@ export function AdminDashboard() {
   const [showStudentModal, setShowStudentModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [applicationMessage, setApplicationMessage] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<"applications" | "notices" | "attendance">("applications");
+  const [activeSection, setActiveSection] = useState<"applications" | "notices" | "hostellers" | "attendance">(
+    "applications",
+  );
+  const [hostellers, setHostellers] = useState<AdminApplication[]>([]);
+  const [hostellerLoading, setHostellerLoading] = useState(false);
+  const [hostellerError, setHostellerError] = useState<string | null>(null);
+  const [hostellerInternId, setHostellerInternId] = useState("");
+  const [hostellerLookupLoading, setHostellerLookupLoading] = useState(false);
+  const [hostellerEnrollLoading, setHostellerEnrollLoading] = useState(false);
+  const [hostellerLookupResult, setHostellerLookupResult] = useState<AdminApplication | null>(null);
+  const [hostellerScannerOpen, setHostellerScannerOpen] = useState(false);
+  const [hostellerScannerError, setHostellerScannerError] = useState<string | null>(null);
+  const hostellerVideoRef = useRef<HTMLVideoElement | null>(null);
+  const hostellerStreamRef = useRef<MediaStream | null>(null);
 
   useTopLoading(
     loading ||
       noticeLoading ||
       noticeSaving ||
+      hostellerLoading ||
+      hostellerLookupLoading ||
+      hostellerEnrollLoading ||
       studentSaving ||
       bulkSaving ||
       deletingApplicationId !== null ||
@@ -275,6 +291,28 @@ export function AdminDashboard() {
     }
   }, [router]);
 
+  const loadHostellers = useCallback(async () => {
+    setHostellerLoading(true);
+    setHostellerError(null);
+    try {
+      const response = await fetch("/api/admin/hostellers");
+      if (response.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
+      const json = (await response.json()) as { items?: AdminApplication[]; error?: string };
+      if (!response.ok) {
+        setHostellerError(json.error ?? "Failed to load hostellers.");
+        return;
+      }
+      setHostellers(json.items ?? []);
+    } catch {
+      setHostellerError("Network error while loading hostellers.");
+    } finally {
+      setHostellerLoading(false);
+    }
+  }, [router]);
+
   useEffect(() => {
     void load();
   }, [load]);
@@ -282,6 +320,106 @@ export function AdminDashboard() {
   useEffect(() => {
     void loadNotices();
   }, [loadNotices]);
+
+  useEffect(() => {
+    if (activeSection === "hostellers") {
+      void loadHostellers();
+    }
+  }, [activeSection, loadHostellers]);
+
+  const stopHostellerScanner = useCallback(() => {
+    if (hostellerStreamRef.current) {
+      for (const track of hostellerStreamRef.current.getTracks()) {
+        track.stop();
+      }
+    }
+    hostellerStreamRef.current = null;
+    if (hostellerVideoRef.current) {
+      hostellerVideoRef.current.srcObject = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hostellerScannerOpen) {
+      stopHostellerScanner();
+      return;
+    }
+
+    let cancelled = false;
+    let rafId = 0;
+
+    async function startScanner() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+          audio: false,
+        });
+        if (cancelled) {
+          for (const track of stream.getTracks()) track.stop();
+          return;
+        }
+
+        hostellerStreamRef.current = stream;
+        const video = hostellerVideoRef.current;
+        if (!video) return;
+        video.srcObject = stream;
+        await video.play();
+
+        const BarcodeDetectorCtor = (
+          window as unknown as {
+            BarcodeDetector?: new (config?: { formats?: string[] }) => {
+              detect: (source: ImageBitmapSource) => Promise<Array<{ rawValue?: string }>>;
+            };
+          }
+        ).BarcodeDetector;
+
+        if (!BarcodeDetectorCtor) {
+          setHostellerScannerError("Barcode scan is not supported in this browser. Enter Intern ID manually.");
+          return;
+        }
+
+        setHostellerScannerError(null);
+        const detector = new BarcodeDetectorCtor({
+          formats: ["code_128", "code_39", "ean_13", "ean_8", "qr_code"],
+        });
+
+        const tick = async () => {
+          if (cancelled || !hostellerScannerOpen) return;
+          try {
+            if (video.readyState >= 2) {
+              const found = await detector.detect(video);
+              const rawValue = found[0]?.rawValue?.trim();
+              if (rawValue) {
+                setHostellerInternId(rawValue);
+                setHostellerScannerOpen(false);
+                stopHostellerScanner();
+                return;
+              }
+            }
+          } catch {
+            // Ignore intermittent detector errors.
+          }
+          rafId = window.requestAnimationFrame(() => {
+            void tick();
+          });
+        };
+
+        rafId = window.requestAnimationFrame(() => {
+          void tick();
+        });
+      } catch {
+        setHostellerScannerError("Unable to access camera. Check permissions or use manual Intern ID entry.");
+      }
+    }
+
+    void startScanner();
+
+    return () => {
+      cancelled = true;
+      if (rafId) window.cancelAnimationFrame(rafId);
+      stopHostellerScanner();
+    };
+  }, [hostellerScannerOpen, stopHostellerScanner]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -729,6 +867,68 @@ export function AdminDashboard() {
     }
   }
 
+  async function lookupHosteller() {
+    const internId = hostellerInternId.trim();
+    if (!internId) {
+      setHostellerError("Enter or scan an Intern ID.");
+      return;
+    }
+
+    setHostellerLookupLoading(true);
+    setHostellerError(null);
+    try {
+      const response = await fetch(`/api/admin/hostellers/lookup?internId=${encodeURIComponent(internId)}`);
+      if (response.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
+      const json = (await response.json()) as { item?: AdminApplication; error?: string };
+      if (!response.ok || !json.item) {
+        setHostellerLookupResult(null);
+        setHostellerError(json.error ?? "Student not found.");
+        return;
+      }
+      setHostellerLookupResult(json.item);
+    } catch {
+      setHostellerError("Network error while looking up Intern ID.");
+    } finally {
+      setHostellerLookupLoading(false);
+    }
+  }
+
+  async function enrollHosteller(enroll: boolean) {
+    const sourceInternId = hostellerLookupResult?.internId ?? hostellerInternId.trim();
+    if (!sourceInternId) {
+      setHostellerError("Intern ID is required.");
+      return;
+    }
+
+    setHostellerEnrollLoading(true);
+    setHostellerError(null);
+    try {
+      const response = await fetch("/api/admin/hostellers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ internId: sourceInternId, enroll }),
+      });
+      if (response.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
+      const json = (await response.json()) as { item?: AdminApplication; error?: string };
+      if (!response.ok || !json.item) {
+        setHostellerError(json.error ?? "Failed to update hosteller enrollment.");
+        return;
+      }
+      setHostellerLookupResult(json.item);
+      await loadHostellers();
+    } catch {
+      setHostellerError("Network error while updating hosteller enrollment.");
+    } finally {
+      setHostellerEnrollLoading(false);
+    }
+  }
+
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 1;
   const subjectOptions = Array.from(new Set([...(data?.filters.subjects ?? []), studentForm.subject].filter(Boolean)));
   const subpartOptions = Array.from(new Set([...(data?.filters.subparts ?? []), studentForm.subpart].filter(Boolean)));
@@ -767,6 +967,13 @@ export function AdminDashboard() {
           onClick={() => setActiveSection("notices")}
         >
           Notices
+        </button>
+        <button
+          type="button"
+          className={`btn btn-sm ${activeSection === "hostellers" ? "btn-green" : "btn-secondary"}`}
+          onClick={() => setActiveSection("hostellers")}
+        >
+          Hostellers
         </button>
         <button
           type="button"
@@ -1598,6 +1805,147 @@ export function AdminDashboard() {
                 {noticeError}
               </p>
             ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {activeSection === "hostellers" ? (
+        <section className="admin-notices-layout">
+          <div className="admin-filters admin-notice-form">
+            <h2>Hosteller verification (Admin)</h2>
+            <p className="admin-muted">
+              Enter Intern ID manually or scan barcode from ID card, then enroll student as hosteller.
+            </p>
+            <div className="admin-filters-row">
+              <div className="form-field admin-filter-search">
+                <label htmlFor="hosteller-intern-id">Intern ID</label>
+                <input
+                  id="hosteller-intern-id"
+                  value={hostellerInternId}
+                  placeholder="NITJSR-XXXX"
+                  onChange={(e) => setHostellerInternId(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="admin-filters-actions">
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setHostellerScannerOpen((prev) => !prev)}
+              >
+                {hostellerScannerOpen ? "Stop camera scan" : "Scan ID card barcode"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-green btn-sm"
+                onClick={() => void lookupHosteller()}
+                disabled={hostellerLookupLoading || hostellerEnrollLoading}
+              >
+                {hostellerLookupLoading ? "Looking up..." : "Find student"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-green btn-sm"
+                onClick={() => void enrollHosteller(true)}
+                disabled={!hostellerLookupResult || hostellerEnrollLoading}
+              >
+                {hostellerEnrollLoading ? "Saving..." : "Enroll as hosteller"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => void enrollHosteller(false)}
+                disabled={!hostellerLookupResult || hostellerEnrollLoading}
+              >
+                Remove hosteller
+              </button>
+            </div>
+            {hostellerScannerOpen ? (
+              <div className="admin-idcard-progress" role="status" aria-live="polite">
+                <video ref={hostellerVideoRef} className="admin-video-scan" muted playsInline />
+              </div>
+            ) : null}
+            {hostellerScannerError ? (
+              <p className="admin-error" role="alert">
+                {hostellerScannerError}
+              </p>
+            ) : null}
+            {hostellerLookupResult ? (
+              <div className="admin-detail-row" style={{ marginTop: 12 }}>
+                <dl className="admin-detail-grid">
+                  <div>
+                    <dt>Name</dt>
+                    <dd>{hostellerLookupResult.fullName}</dd>
+                  </div>
+                  <div>
+                    <dt>Intern ID</dt>
+                    <dd>{hostellerLookupResult.internId || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt>College</dt>
+                    <dd>{hostellerLookupResult.collegeName}</dd>
+                  </div>
+                  <div>
+                    <dt>Branch</dt>
+                    <dd>{hostellerLookupResult.subject}</dd>
+                  </div>
+                  <div>
+                    <dt>Module</dt>
+                    <dd>{hostellerLookupResult.subpart}</dd>
+                  </div>
+                  <div>
+                    <dt>Hosteller (Admin verified)</dt>
+                    <dd>{hostellerLookupResult.hostellerVerificationFromAdmin ? "Yes" : "No"}</dd>
+                  </div>
+                </dl>
+              </div>
+            ) : null}
+            {hostellerError ? (
+              <p className="admin-error" role="alert">
+                {hostellerError}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Intern ID</th>
+                  <th>Name</th>
+                  <th>College</th>
+                  <th>Branch</th>
+                  <th>Module</th>
+                  <th>Verified At</th>
+                </tr>
+              </thead>
+              <tbody>
+                {hostellerLoading ? (
+                  <tr>
+                    <td colSpan={6}>Loading hostellers...</td>
+                  </tr>
+                ) : hostellers.length === 0 ? (
+                  <tr>
+                    <td colSpan={6}>No admin-verified hostellers yet.</td>
+                  </tr>
+                ) : (
+                  hostellers.map((student) => (
+                    <tr key={student.id}>
+                      <td>{student.internId || "—"}</td>
+                      <td>{student.fullName}</td>
+                      <td>{student.collegeName}</td>
+                      <td>{student.subject}</td>
+                      <td>{student.subpart}</td>
+                      <td>
+                        {student.hostellerVerificationAt
+                          ? new Date(student.hostellerVerificationAt).toLocaleString("en-IN")
+                          : "—"}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </section>
       ) : null}

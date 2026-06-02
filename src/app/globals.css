@@ -2950,6 +2950,13 @@ img {
   white-space: nowrap;
 }
 
+.admin-video-scan {
+  width: min(100%, 420px);
+  border: 1px solid var(--border, #d0d0d0);
+  border-radius: 10px;
+  background: #000;
+}
+
 .admin-filters .form-field textarea,
 .admin-filters .form-field select,
 .admin-filters .form-field input {

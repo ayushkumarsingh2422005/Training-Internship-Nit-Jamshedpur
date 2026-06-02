@@ -18,4 +18,6 @@ export type Application = {
   hasLaptop?: boolean | null;
   laptopUpdatedAt?: string | null;
   internId?: string | null;
+  hostellerVerificationFromAdmin?: boolean;
+  hostellerVerificationAt?: string | null;
 };

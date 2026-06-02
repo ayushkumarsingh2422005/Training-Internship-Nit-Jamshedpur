@@ -35,6 +35,13 @@ export function toAdminApplication(doc: AdminDoc): AdminApplication {
     if (!Number.isNaN(date.getTime())) profileCorrectedAt = date.toISOString();
   }
 
+  const hostellerAt = doc.hostellerVerificationAt;
+  let hostellerVerificationAt: string | null = null;
+  if (hostellerAt != null && hostellerAt !== "") {
+    const date = hostellerAt instanceof Date ? hostellerAt : new Date(String(hostellerAt));
+    if (!Number.isNaN(date.getTime())) hostellerVerificationAt = date.toISOString();
+  }
+
   let createdAt: string | null = null;
   let updatedAt: string | null = null;
   const created = doc.createdAt;
@@ -71,6 +78,8 @@ export function toAdminApplication(doc: AdminDoc): AdminApplication {
     hasLaptop: doc.hasLaptop === true || doc.hasLaptop === false ? doc.hasLaptop : null,
     laptopUpdatedAt,
     internId: doc.internId?.trim() || null,
+    hostellerVerificationFromAdmin: Boolean(doc.hostellerVerificationFromAdmin),
+    hostellerVerificationAt,
     createdAt,
     updatedAt,
   };

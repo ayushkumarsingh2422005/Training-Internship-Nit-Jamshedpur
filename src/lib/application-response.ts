@@ -20,6 +20,8 @@ export type DbApplicationInput = {
   hasLaptop?: boolean | null;
   laptopUpdatedAt?: unknown;
   internId?: string | null;
+  hostellerVerificationFromAdmin?: boolean;
+  hostellerVerificationAt?: unknown;
 };
 
 export function toApplicationResponse(doc: DbApplicationInput): Application {
@@ -50,6 +52,15 @@ export function toApplicationResponse(doc: DbApplicationInput): Application {
     }
   }
 
+  const hostellerAt = doc.hostellerVerificationAt;
+  let hostellerVerificationAt: string | null = null;
+  if (hostellerAt != null && hostellerAt !== "") {
+    const date = hostellerAt instanceof Date ? hostellerAt : new Date(String(hostellerAt));
+    if (!Number.isNaN(date.getTime())) {
+      hostellerVerificationAt = date.toISOString();
+    }
+  }
+
   return {
     fullName: doc.fullName,
     fatherName: doc.fatherName,
@@ -72,5 +83,7 @@ export function toApplicationResponse(doc: DbApplicationInput): Application {
     hasLaptop: doc.hasLaptop === true || doc.hasLaptop === false ? doc.hasLaptop : null,
     laptopUpdatedAt,
     internId: doc.internId?.trim() || null,
+    hostellerVerificationFromAdmin: Boolean(doc.hostellerVerificationFromAdmin),
+    hostellerVerificationAt,
   };
 }

@@ -21,6 +21,7 @@
     "nextjs-toploader": "^3.9.17",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-qr-barcode-scanner": "^2.1.25",
     "ws": "^8.21.0"
   },
   "devDependencies": {
