@@ -13,6 +13,7 @@ export type AttendanceRecordInput = {
 
 export type AttendanceStudentRow = {
   id: string;
+  internId: string | null;
   fullName: string;
   email: string;
   phoneNumber: string;

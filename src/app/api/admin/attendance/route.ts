@@ -81,6 +81,7 @@ export async function GET(request: Request) {
       const id = application._id.toString();
       return {
         id,
+        internId: application.internId?.trim() || null,
         fullName: application.fullName,
         email: application.email,
         phoneNumber: application.phoneNumber,

@@ -30,6 +30,42 @@ type LoadResponse = {
   error?: string;
 };
 
+const INTERN_PREFIX = "NIT-INT26-";
+
+function mapMachineEnrollmentToInternId(rawEnNo: string): string | null {
+  const digits = rawEnNo.replace(/\D/g, "");
+  if (!digits) return null;
+  const serial = Number(digits.slice(-4));
+  if (!Number.isFinite(serial) || serial < 0) return null;
+
+  const mapped = 1000 + serial;
+  if (mapped < 1000 || mapped > 3000) return null;
+  return `${INTERN_PREFIX}${mapped}`;
+}
+
+function parseMachineAttendanceTxt(content: string, selectedDate: string): Set<string> {
+  const lines = content
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length <= 1) return new Set();
+
+  const presentInternIds = new Set<string>();
+  for (const row of lines.slice(1)) {
+    const cols = row.split("\t");
+    if (cols.length < 10) continue;
+
+    const enNo = cols[2] ?? "";
+    const inOut = (cols[6] ?? "").trim();
+    const dateTime = (cols[9] ?? "").trim();
+    if (inOut !== "1" || !dateTime.startsWith(selectedDate)) continue;
+
+    const mapped = mapMachineEnrollmentToInternId(enNo);
+    if (mapped) presentInternIds.add(mapped);
+  }
+  return presentInternIds;
+}
+
 export function AdminAttendance() {
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
@@ -48,6 +84,7 @@ export function AdminAttendance() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bulkInfo, setBulkInfo] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [deletedFlash, setDeletedFlash] = useState(false);
 
@@ -82,6 +119,7 @@ export function AdminAttendance() {
 
     setLoadingStudents(true);
     setError(null);
+    setBulkInfo(null);
     setSavedFlash(false);
 
     const params = new URLSearchParams({
@@ -136,6 +174,46 @@ export function AdminAttendance() {
 
   function markAll(status: AttendanceStatus) {
     setStudents((prev) => prev.map((student) => ({ ...student, status })));
+  }
+
+  async function handleBulkAttendanceFile(file: File) {
+    if (!date || !moduleName || !sessionType) {
+      setError("Select date, module, and session before uploading attendance TXT.");
+      return;
+    }
+    if (students.length === 0) {
+      setError("Load roster before uploading attendance TXT.");
+      return;
+    }
+
+    setError(null);
+    setBulkInfo(null);
+
+    try {
+      const text = await file.text();
+      const presentInternIds = parseMachineAttendanceTxt(text, date);
+      if (presentInternIds.size === 0) {
+        setBulkInfo("No valid punches found in TXT for selected date.");
+        return;
+      }
+
+      let matched = 0;
+      setStudents((prev) =>
+        prev.map((student) => {
+          const normalizedInternId = student.internId?.trim().toUpperCase() ?? "";
+          const isPresent = normalizedInternId ? presentInternIds.has(normalizedInternId) : false;
+          if (isPresent) matched += 1;
+          return { ...student, status: isPresent ? "present" : "absent" };
+        }),
+      );
+
+      const unmatched = presentInternIds.size - matched;
+      setBulkInfo(
+        `Bulk TXT attendance applied: ${matched} matched as present, ${unmatched > 0 ? `${unmatched} unmatched` : "0 unmatched"}.`,
+      );
+    } catch {
+      setError("Failed to parse attendance TXT.");
+    }
   }
 
   async function handleSave() {
@@ -207,6 +285,7 @@ export function AdminAttendance() {
 
     setDeleting(true);
     setError(null);
+    setBulkInfo(null);
     setSavedFlash(false);
     setDeletedFlash(false);
 
@@ -343,6 +422,20 @@ export function AdminAttendance() {
               <span>Total: {students.length}</span>
             </div>
             <div className="admin-attendance-bulk">
+              <label className="btn btn-secondary btn-sm" htmlFor="attendance-bulk-txt">
+                Upload machine TXT
+              </label>
+              <input
+                id="attendance-bulk-txt"
+                type="file"
+                accept=".txt,text/plain"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleBulkAttendanceFile(file);
+                  e.target.value = "";
+                }}
+              />
               <button type="button" className="btn btn-secondary btn-sm" onClick={() => markAll("present")}>
                 Mark all present
               </button>
@@ -357,6 +450,7 @@ export function AdminAttendance() {
               <thead>
                 <tr>
                   <th>#</th>
+                  <th>Intern ID</th>
                   <th>Name</th>
                   <th>College</th>
                   <th>Mobile</th>
@@ -374,6 +468,7 @@ export function AdminAttendance() {
                     }
                   >
                     <td>{index + 1}</td>
+                    <td>{student.internId || "—"}</td>
                     <td>{student.fullName}</td>
                     <td>{student.collegeName}</td>
                     <td>{student.phoneNumber}</td>
@@ -428,6 +523,11 @@ export function AdminAttendance() {
       {deletedFlash ? (
         <p className="admin-attendance-saved" role="status">
           Attendance session deleted.
+        </p>
+      ) : null}
+      {bulkInfo ? (
+        <p className="admin-attendance-saved" role="status">
+          {bulkInfo}
         </p>
       ) : null}
       {error ? (
