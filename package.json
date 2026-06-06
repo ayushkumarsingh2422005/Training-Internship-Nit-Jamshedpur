@@ -9,7 +9,8 @@
     "lint": "next lint",
     "db:seed": "tsx scripts/seed-mongodb.ts",
     "db:seed:reset": "tsx scripts/seed-mongodb.ts --reset",
-    "db:assign-intern-ids": "tsx scripts/assign-intern-ids.ts"
+    "db:assign-intern-ids": "tsx scripts/assign-intern-ids.ts",
+    "db:verify-from-excel": "tsx scripts/verify-from-excel.ts"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
@@ -22,7 +23,8 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-qr-barcode-scanner": "^2.1.25",
-    "ws": "^8.21.0"
+    "ws": "^8.21.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/jsbarcode": "^3.11.4",

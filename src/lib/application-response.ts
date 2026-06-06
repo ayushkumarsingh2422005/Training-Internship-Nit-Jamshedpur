@@ -20,6 +20,8 @@ export type DbApplicationInput = {
   hasLaptop?: boolean | null;
   laptopUpdatedAt?: unknown;
   internId?: string | null;
+  isVerifiedByAdmin?: boolean;
+  verifiedByAdminAt?: unknown;
   hostellerVerificationFromAdmin?: boolean;
   hostellerVerificationAt?: unknown;
 };

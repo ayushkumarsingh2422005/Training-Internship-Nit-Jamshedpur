@@ -3,6 +3,8 @@ import type { DbApplicationInput } from "@/lib/application-response";
 
 export type AdminApplication = Application & {
   id: string;
+  isVerifiedByAdmin: boolean;
+  verifiedByAdminAt: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 };
@@ -33,6 +35,13 @@ export function toAdminApplication(doc: AdminDoc): AdminApplication {
   if (profileAt != null && profileAt !== "") {
     const date = profileAt instanceof Date ? profileAt : new Date(String(profileAt));
     if (!Number.isNaN(date.getTime())) profileCorrectedAt = date.toISOString();
+  }
+
+  const verifiedAt = doc.verifiedByAdminAt;
+  let verifiedByAdminAt: string | null = null;
+  if (verifiedAt != null && verifiedAt !== "") {
+    const date = verifiedAt instanceof Date ? verifiedAt : new Date(String(verifiedAt));
+    if (!Number.isNaN(date.getTime())) verifiedByAdminAt = date.toISOString();
   }
 
   const hostellerAt = doc.hostellerVerificationAt;
@@ -80,6 +89,8 @@ export function toAdminApplication(doc: AdminDoc): AdminApplication {
     internId: doc.internId?.trim() || null,
     hostellerVerificationFromAdmin: Boolean(doc.hostellerVerificationFromAdmin),
     hostellerVerificationAt,
+    isVerifiedByAdmin: Boolean(doc.isVerifiedByAdmin),
+    verifiedByAdminAt,
     createdAt,
     updatedAt,
   };

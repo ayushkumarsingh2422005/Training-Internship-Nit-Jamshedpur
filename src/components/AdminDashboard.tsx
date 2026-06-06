@@ -17,6 +17,7 @@ type AppliedFilters = {
   accommodation: string;
   laptop: string;
   gender: string;
+  verification: string;
 };
 
 type ApiResponse = {
@@ -171,6 +172,7 @@ export function AdminDashboard() {
   const [accommodation, setAccommodation] = useState("");
   const [laptop, setLaptop] = useState("");
   const [gender, setGender] = useState("");
+  const [verification, setVerification] = useState("");
   const [page, setPage] = useState(1);
   const [applied, setApplied] = useState<AppliedFilters>({
     q: "",
@@ -180,6 +182,7 @@ export function AdminDashboard() {
     accommodation: "",
     laptop: "",
     gender: "",
+    verification: "",
   });
   const [csvExporting, setCsvExporting] = useState(false);
   const [idCardsExporting, setIdCardsExporting] = useState(false);
@@ -188,6 +191,7 @@ export function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingApplicationId, setDeletingApplicationId] = useState<string | null>(null);
+  const [verifyingApplicationId, setVerifyingApplicationId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [adminNotices, setAdminNotices] = useState<AdminNotice[]>([]);
   const [noticeLoading, setNoticeLoading] = useState(true);
@@ -231,6 +235,7 @@ export function AdminDashboard() {
       studentSaving ||
       bulkSaving ||
       deletingApplicationId !== null ||
+      verifyingApplicationId !== null ||
       csvExporting ||
       idCardsExporting,
   );
@@ -247,6 +252,7 @@ export function AdminDashboard() {
     if (applied.accommodation) params.set("accommodation", applied.accommodation);
     if (applied.laptop) params.set("laptop", applied.laptop);
     if (applied.gender) params.set("gender", applied.gender);
+    if (applied.verification) params.set("verification", applied.verification);
     params.set("page", String(page));
     params.set("limit", String(LIMIT));
 
@@ -435,7 +441,7 @@ export function AdminDashboard() {
   function handleSearch(event: React.FormEvent) {
     event.preventDefault();
     setPage(1);
-    setApplied({ q, college, subject, subpart, accommodation, laptop, gender });
+    setApplied({ q, college, subject, subpart, accommodation, laptop, gender, verification });
   }
 
   function clearFilters() {
@@ -446,6 +452,7 @@ export function AdminDashboard() {
     setAccommodation("");
     setLaptop("");
     setGender("");
+    setVerification("");
     setPage(1);
     setApplied({
       q: "",
@@ -455,6 +462,7 @@ export function AdminDashboard() {
       accommodation: "",
       laptop: "",
       gender: "",
+      verification: "",
     });
   }
 
@@ -470,6 +478,7 @@ export function AdminDashboard() {
     if (applied.accommodation) params.set("accommodation", applied.accommodation);
     if (applied.laptop) params.set("laptop", applied.laptop);
     if (applied.gender) params.set("gender", applied.gender);
+    if (applied.verification) params.set("verification", applied.verification);
     params.set("export", "csv");
 
     try {
@@ -520,6 +529,7 @@ export function AdminDashboard() {
     if (applied.accommodation) params.set("accommodation", applied.accommodation);
     if (applied.laptop) params.set("laptop", applied.laptop);
     if (applied.gender) params.set("gender", applied.gender);
+    if (applied.verification) params.set("verification", applied.verification);
     params.set("export", "idcards");
 
     try {
@@ -586,6 +596,32 @@ export function AdminDashboard() {
       setError("Network error while deleting application.");
     } finally {
       setDeletingApplicationId(null);
+    }
+  }
+
+  async function toggleApplicationVerification(app: AdminApplication) {
+    setVerifyingApplicationId(app.id);
+    setError(null);
+    try {
+      const response = await fetch("/api/admin/applications/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: app.id, verified: !app.isVerifiedByAdmin }),
+      });
+      const json = (await response.json()) as { error?: string };
+      if (response.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
+      if (!response.ok) {
+        setError(json.error ?? "Failed to update verification status.");
+        return;
+      }
+      await load();
+    } catch {
+      setError("Network error while updating verification.");
+    } finally {
+      setVerifyingApplicationId(null);
     }
   }
 
@@ -1390,6 +1426,18 @@ export function AdminDashboard() {
               <option value="unset">Not set</option>
             </select>
           </div>
+          <div className="form-field">
+            <label htmlFor="admin-verification">Verification</label>
+            <select
+              id="admin-verification"
+              value={verification}
+              onChange={(e) => setVerification(e.target.value)}
+            >
+              <option value="">All</option>
+              <option value="verified">Verified</option>
+              <option value="not-verified">Not Verified</option>
+            </select>
+          </div>
         </div>
         <div className="admin-filters-actions">
           <button type="submit" className="btn btn-green btn-sm">
@@ -1473,7 +1521,13 @@ export function AdminDashboard() {
               <tbody>
                 {data.items.map((app) => (
                   <Fragment key={app.id}>
-                    <tr>
+                    <tr
+                      className={
+                        app.isVerifiedByAdmin
+                          ? "admin-application-row-verified"
+                          : "admin-application-row-not-verified"
+                      }
+                    >
                       <td>{app.internId || "—"}</td>
                       <td>{app.fullName}</td>
                       <td>
@@ -1489,7 +1543,23 @@ export function AdminDashboard() {
                         <div className="admin-row-actions">
                           <button
                             type="button"
-                            className="btn btn-secondary btn-sm"
+                            className={`admin-icon-btn ${app.isVerifiedByAdmin ? "admin-icon-btn-verified" : "admin-icon-btn-not-verified"}`}
+                            onClick={() => void toggleApplicationVerification(app)}
+                            disabled={
+                              deletingApplicationId === app.id || verifyingApplicationId === app.id
+                            }
+                            title={app.isVerifiedByAdmin ? "Mark as not verified" : "Mark as verified"}
+                            aria-label={app.isVerifiedByAdmin ? "Mark as not verified" : "Mark as verified"}
+                          >
+                            {verifyingApplicationId === app.id
+                              ? "⏳"
+                              : app.isVerifiedByAdmin
+                                ? "✓"
+                                : "○"}
+                          </button>
+                          <button
+                            type="button"
+                            className="admin-icon-btn admin-icon-btn-neutral"
                             onClick={() => {
                               setStudentForm(studentFormFromApplication(app));
                               if ((COLLEGE_DROPDOWN_OPTIONS as readonly string[]).includes(app.collegeName)) {
@@ -1502,23 +1572,29 @@ export function AdminDashboard() {
                               setApplicationMessage(null);
                               setShowStudentModal(true);
                             }}
+                            title="Edit student"
+                            aria-label="Edit student"
                           >
-                            Edit
+                            ✎
                           </button>
                           <button
                             type="button"
-                            className="btn btn-secondary btn-sm"
+                            className="admin-icon-btn admin-icon-btn-neutral"
                             onClick={() => setExpandedId(expandedId === app.id ? null : app.id)}
+                            title={expandedId === app.id ? "Hide details" : "Show details"}
+                            aria-label={expandedId === app.id ? "Hide details" : "Show details"}
                           >
-                            {expandedId === app.id ? "Hide" : "More"}
+                            {expandedId === app.id ? "▾" : "▸"}
                           </button>
                           <button
                             type="button"
-                            className="btn btn-outline-admin btn-sm"
+                            className="admin-icon-btn admin-icon-btn-danger"
                             onClick={() => void deleteApplication(app)}
-                            disabled={deletingApplicationId === app.id}
+                            disabled={deletingApplicationId === app.id || verifyingApplicationId === app.id}
+                            title={deletingApplicationId === app.id ? "Deleting..." : "Delete student"}
+                            aria-label={deletingApplicationId === app.id ? "Deleting student" : "Delete student"}
                           >
-                            {deletingApplicationId === app.id ? "Deleting..." : "Delete"}
+                            {deletingApplicationId === app.id ? "…" : "🗑"}
                           </button>
                         </div>
                       </td>
@@ -1547,6 +1623,16 @@ export function AdminDashboard() {
                               <dt>School</dt>
                               <dd>{app.schoolName}</dd>
                             </div>
+                            <div>
+                              <dt>Admin verification</dt>
+                              <dd>{app.isVerifiedByAdmin ? "Verified" : "Not verified"}</dd>
+                            </div>
+                            {app.verifiedByAdminAt ? (
+                              <div>
+                                <dt>Verified at</dt>
+                                <dd>{new Date(app.verifiedByAdminAt).toLocaleString("en-IN")}</dd>
+                              </div>
+                            ) : null}
                             <div className="admin-detail-full">
                               <dt>Address</dt>
                               <dd>{app.address}</dd>
@@ -1783,15 +1869,23 @@ export function AdminDashboard() {
                       </td>
                       <td>
                         <div className="admin-row-actions">
-                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => editNotice(notice)}>
-                            Edit
+                          <button
+                            type="button"
+                            className="admin-icon-btn admin-icon-btn-neutral"
+                            onClick={() => editNotice(notice)}
+                            title="Edit notice"
+                            aria-label="Edit notice"
+                          >
+                            ✎
                           </button>
                           <button
                             type="button"
-                            className="btn btn-outline-admin btn-sm"
+                            className="admin-icon-btn admin-icon-btn-danger"
                             onClick={() => void deleteNotice(notice.id)}
+                            title="Delete notice"
+                            aria-label="Delete notice"
                           >
-                            Delete
+                            🗑
                           </button>
                         </div>
                       </td>

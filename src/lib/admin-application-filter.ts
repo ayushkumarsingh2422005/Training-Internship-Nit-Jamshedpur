@@ -6,6 +6,7 @@ export type AdminApplicationFilterParams = {
   accommodation?: string;
   laptop?: string;
   gender?: string;
+  verification?: string;
 };
 
 function escapeRegex(value: string): string {
@@ -26,6 +27,7 @@ export function buildAdminApplicationFilter(
   const accommodation = params.accommodation ?? "";
   const laptop = params.laptop ?? "";
   const gender = params.gender?.trim() ?? "";
+  const verification = params.verification ?? "";
 
   const filter: Record<string, unknown> = {};
 
@@ -40,6 +42,9 @@ export function buildAdminApplicationFilter(
   if (laptop === "yes") filter.hasLaptop = true;
   else if (laptop === "no") filter.hasLaptop = false;
   else if (laptop === "unset") filter.hasLaptop = null;
+
+  if (verification === "verified") filter.isVerifiedByAdmin = true;
+  else if (verification === "not-verified") filter.isVerifiedByAdmin = false;
 
   if (college) {
     filter.collegeName = caseInsensitiveRegex(college);
@@ -71,5 +76,6 @@ export function parseAdminApplicationFilterParams(
     accommodation: searchParams.get("accommodation") ?? undefined,
     laptop: searchParams.get("laptop") ?? undefined,
     gender: searchParams.get("gender") ?? undefined,
+    verification: searchParams.get("verification") ?? undefined,
   };
 }

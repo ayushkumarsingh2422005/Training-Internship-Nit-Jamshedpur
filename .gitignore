@@ -5,3 +5,5 @@ out
 .env*.local
 npm-debug.log*
 /clg specific
+
+/.attendance data

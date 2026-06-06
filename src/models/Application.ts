@@ -22,6 +22,8 @@ const applicationSchema = new Schema(
     internId: { type: String, default: null, trim: true },
     hostellerVerificationFromAdmin: { type: Boolean, default: false },
     hostellerVerificationAt: { type: Date, default: null },
+    isVerifiedByAdmin: { type: Boolean, default: false },
+    verifiedByAdminAt: { type: Date, default: null },
   },
   {
     timestamps: true,
@@ -34,6 +36,7 @@ applicationSchema.index({ phoneNumber: 1 });
 applicationSchema.index({ subject: 1, subpart: 1 });
 applicationSchema.index({ internId: 1 }, { unique: true, sparse: true });
 applicationSchema.index({ hostellerVerificationFromAdmin: 1, fullName: 1 });
+applicationSchema.index({ isVerifiedByAdmin: 1, fullName: 1 });
 
 export type ApplicationDocument = InferSchemaType<typeof applicationSchema> & {
   _id: mongoose.Types.ObjectId;

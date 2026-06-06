@@ -3015,6 +3015,22 @@ img {
   background: #fafcfa;
 }
 
+.admin-table tbody tr.admin-application-row-verified td {
+  background: #e8f5e9;
+}
+
+.admin-table tbody tr.admin-application-row-not-verified td {
+  background: #ffebee;
+}
+
+.admin-table tbody tr.admin-application-row-verified:hover td {
+  background: #dcedc8;
+}
+
+.admin-table tbody tr.admin-application-row-not-verified:hover td {
+  background: #ffcdd2;
+}
+
 .admin-detail-row td {
   background: #f5f9f6;
 }
@@ -3091,8 +3107,56 @@ img {
 
 .admin-row-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   justify-content: flex-end;
+}
+
+.admin-icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid #d6dde3;
+  background: #fff;
+  color: #2b2b2b;
+  display: inline-grid;
+  place-items: center;
+  font-size: 0.92rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.12s ease, filter 0.12s ease, background 0.12s ease;
+}
+
+.admin-icon-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(0.98);
+}
+
+.admin-icon-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-icon-btn-neutral {
+  border-color: #d6dde3;
+  background: #f8faf9;
+}
+
+.admin-icon-btn-verified {
+  border-color: #2e7d32;
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.admin-icon-btn-not-verified {
+  border-color: #c62828;
+  background: #ffebee;
+  color: #b71c1c;
+}
+
+.admin-icon-btn-danger {
+  border-color: #c62828;
+  background: #fff5f5;
+  color: #b71c1c;
 }
 
 .admin-muted {
