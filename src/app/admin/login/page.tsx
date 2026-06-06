@@ -47,7 +47,7 @@ function AdminLoginForm() {
     <main className="admin-login-page">
       <div className="admin-login-card">
         <h1>Admin sign in</h1>
-        <p className="admin-login-lead">Shortlisted applications dashboard</p>
+        <p className="admin-login-lead">Admin / Hostel Admin dashboard access</p>
 
         <form onSubmit={handleSubmit} className="admin-login-form">
           <div className="form-field">

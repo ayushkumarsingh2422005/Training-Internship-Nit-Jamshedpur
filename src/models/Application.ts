@@ -22,6 +22,7 @@ const applicationSchema = new Schema(
     internId: { type: String, default: null, trim: true },
     hostellerVerificationFromAdmin: { type: Boolean, default: false },
     hostellerVerificationAt: { type: Date, default: null },
+    hostellerVerifiedByAdminEmail: { type: String, default: null, trim: true, lowercase: true },
     isVerifiedByAdmin: { type: Boolean, default: false },
     verifiedByAdminAt: { type: Date, default: null },
   },

@@ -12,7 +12,7 @@ function clean(value: unknown): string {
 
 export async function GET(request: Request) {
   try {
-    if (!(await getAdminSessionFromRequest(request))) {
+    if (!(await getAdminSessionFromRequest(request, ["admin", "hostel_admin"]))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

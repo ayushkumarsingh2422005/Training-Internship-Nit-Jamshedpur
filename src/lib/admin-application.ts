@@ -89,6 +89,7 @@ export function toAdminApplication(doc: AdminDoc): AdminApplication {
     internId: doc.internId?.trim() || null,
     hostellerVerificationFromAdmin: Boolean(doc.hostellerVerificationFromAdmin),
     hostellerVerificationAt,
+    hostellerVerifiedByAdminEmail: doc.hostellerVerifiedByAdminEmail?.trim() || null,
     isVerifiedByAdmin: Boolean(doc.isVerifiedByAdmin),
     verifiedByAdminAt,
     createdAt,

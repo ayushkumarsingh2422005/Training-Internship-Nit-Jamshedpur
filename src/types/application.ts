@@ -20,4 +20,5 @@ export type Application = {
   internId?: string | null;
   hostellerVerificationFromAdmin?: boolean;
   hostellerVerificationAt?: string | null;
+  hostellerVerifiedByAdminEmail?: string | null;
 };

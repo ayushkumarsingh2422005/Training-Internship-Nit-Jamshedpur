@@ -165,6 +165,8 @@ function studentFormFromApplication(app: AdminApplication): StudentForm {
 
 export function AdminDashboard() {
   const router = useRouter();
+  const [adminRole, setAdminRole] = useState<"admin" | "hostel_admin" | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
   const [q, setQ] = useState("");
   const [college, setCollege] = useState("");
   const [subject, setSubject] = useState("");
@@ -225,20 +227,56 @@ export function AdminDashboard() {
   const hostellerVideoRef = useRef<HTMLVideoElement | null>(null);
   const hostellerStreamRef = useRef<MediaStream | null>(null);
 
-  useTopLoading(
+  const adminOnlyLoading =
     loading ||
-      noticeLoading ||
-      noticeSaving ||
+    noticeLoading ||
+    noticeSaving ||
+    studentSaving ||
+    bulkSaving ||
+    deletingApplicationId !== null ||
+    verifyingApplicationId !== null ||
+    csvExporting ||
+    idCardsExporting;
+
+  useTopLoading(
+    sessionLoading ||
       hostellerLoading ||
       hostellerLookupLoading ||
       hostellerEnrollLoading ||
-      studentSaving ||
-      bulkSaving ||
-      deletingApplicationId !== null ||
-      verifyingApplicationId !== null ||
-      csvExporting ||
-      idCardsExporting,
+      (adminRole === "admin" && adminOnlyLoading),
   );
+
+  useEffect(() => {
+    let active = true;
+    async function loadSession() {
+      setSessionLoading(true);
+      try {
+        const response = await fetch("/api/admin/session");
+        if (response.status === 401) {
+          router.push("/admin/login");
+          return;
+        }
+        const json = (await response.json()) as { role?: "admin" | "hostel_admin" };
+        if (!response.ok || !json.role) {
+          router.push("/admin/login");
+          return;
+        }
+        if (!active) return;
+        setAdminRole(json.role);
+        if (json.role === "hostel_admin") {
+          setActiveSection("hostellers");
+        }
+      } catch {
+        if (active) router.push("/admin/login");
+      } finally {
+        if (active) setSessionLoading(false);
+      }
+    }
+    void loadSession();
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -320,18 +358,23 @@ export function AdminDashboard() {
   }, [router]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (adminRole === "admin") {
+      void load();
+    }
+  }, [adminRole, load]);
 
   useEffect(() => {
-    void loadNotices();
-  }, [loadNotices]);
+    if (adminRole === "admin") {
+      void loadNotices();
+    }
+  }, [adminRole, loadNotices]);
 
   useEffect(() => {
+    if (!adminRole) return;
     if (activeSection === "hostellers") {
       void loadHostellers();
     }
-  }, [activeSection, loadHostellers]);
+  }, [activeSection, adminRole, loadHostellers]);
 
   const stopHostellerScanner = useCallback(() => {
     if (hostellerStreamRef.current) {
@@ -969,18 +1012,30 @@ export function AdminDashboard() {
   const subjectOptions = Array.from(new Set([...(data?.filters.subjects ?? []), studentForm.subject].filter(Boolean)));
   const subpartOptions = Array.from(new Set([...(data?.filters.subparts ?? []), studentForm.subpart].filter(Boolean)));
 
+  if (sessionLoading || !adminRole) {
+    return <p className="admin-loading">Loading dashboard…</p>;
+  }
+
   return (
     <div className="admin-dashboard">
       <header className="admin-topbar">
         <div>
-          <h1>Applications dashboard</h1>
-          <p>All shortlisted students — search, filter, and review records.</p>
+          <h1>{adminRole === "admin" ? "Applications dashboard" : "Hostellers dashboard"}</h1>
+          <p>
+            {adminRole === "admin"
+              ? "All shortlisted students — search, filter, and review records."
+              : "Hostel admin access — search student by Intern ID and manage hosteller verification."}
+          </p>
         </div>
         <div className="admin-topbar-actions">
           <a href="/" className="btn btn-secondary btn-sm">
             Public site
           </a>
-          <button type="button" className="btn btn-outline-admin btn-sm" onClick={() => void load()}>
+          <button
+            type="button"
+            className="btn btn-outline-admin btn-sm"
+            onClick={() => void (adminRole === "admin" ? load() : loadHostellers())}
+          >
             Refresh
           </button>
           <button type="button" className="btn btn-green btn-sm" onClick={() => void handleLogout()}>
@@ -990,20 +1045,24 @@ export function AdminDashboard() {
       </header>
 
       <div className="admin-section-switcher">
-        <button
-          type="button"
-          className={`btn btn-sm ${activeSection === "applications" ? "btn-green" : "btn-secondary"}`}
-          onClick={() => setActiveSection("applications")}
-        >
-          Applications
-        </button>
-        <button
-          type="button"
-          className={`btn btn-sm ${activeSection === "notices" ? "btn-green" : "btn-secondary"}`}
-          onClick={() => setActiveSection("notices")}
-        >
-          Notices
-        </button>
+        {adminRole === "admin" ? (
+          <>
+            <button
+              type="button"
+              className={`btn btn-sm ${activeSection === "applications" ? "btn-green" : "btn-secondary"}`}
+              onClick={() => setActiveSection("applications")}
+            >
+              Applications
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm ${activeSection === "notices" ? "btn-green" : "btn-secondary"}`}
+              onClick={() => setActiveSection("notices")}
+            >
+              Notices
+            </button>
+          </>
+        ) : null}
         <button
           type="button"
           className={`btn btn-sm ${activeSection === "hostellers" ? "btn-green" : "btn-secondary"}`}
@@ -1011,16 +1070,18 @@ export function AdminDashboard() {
         >
           Hostellers
         </button>
-        <button
-          type="button"
-          className={`btn btn-sm ${activeSection === "attendance" ? "btn-green" : "btn-secondary"}`}
-          onClick={() => setActiveSection("attendance")}
-        >
-          Attendance
-        </button>
+        {adminRole === "admin" ? (
+          <button
+            type="button"
+            className={`btn btn-sm ${activeSection === "attendance" ? "btn-green" : "btn-secondary"}`}
+            onClick={() => setActiveSection("attendance")}
+          >
+            Attendance
+          </button>
+        ) : null}
       </div>
 
-      {activeSection === "applications" && data ? (
+      {adminRole === "admin" && activeSection === "applications" && data ? (
         <div className="admin-stats">
           <div className="admin-stat-card">
             <span className="admin-stat-value">{data.total}</span>
@@ -1053,7 +1114,7 @@ export function AdminDashboard() {
         </div>
       ) : null}
 
-      {activeSection === "applications" ? (
+      {adminRole === "admin" && activeSection === "applications" ? (
         <div className="admin-application-toolbar">
           <button
             type="button"
@@ -1080,13 +1141,13 @@ export function AdminDashboard() {
         </div>
       ) : null}
 
-      {activeSection === "applications" && applicationMessage ? (
+      {adminRole === "admin" && activeSection === "applications" && applicationMessage ? (
         <p className="admin-success" role="status">
           {applicationMessage}
         </p>
       ) : null}
 
-      {activeSection === "applications" && showStudentModal ? (
+      {adminRole === "admin" && activeSection === "applications" && showStudentModal ? (
         <div className="admin-modal-backdrop" onClick={() => setShowStudentModal(false)}>
           <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
             <div className="admin-modal-header">
@@ -1305,7 +1366,7 @@ export function AdminDashboard() {
         </div>
       ) : null}
 
-      {activeSection === "applications" && showBulkModal ? (
+      {adminRole === "admin" && activeSection === "applications" && showBulkModal ? (
         <div className="admin-modal-backdrop" onClick={() => setShowBulkModal(false)}>
           <div className="admin-modal admin-modal-sm" onClick={(e) => e.stopPropagation()}>
             <div className="admin-modal-header">
@@ -1351,7 +1412,7 @@ export function AdminDashboard() {
         </div>
       ) : null}
 
-      {activeSection === "applications" ? <form className="admin-filters" onSubmit={handleSearch}>
+      {adminRole === "admin" && activeSection === "applications" ? <form className="admin-filters" onSubmit={handleSearch}>
         <div className="admin-filters-row">
           <div className="form-field admin-filter-search">
             <label htmlFor="admin-q">Search</label>
@@ -1488,19 +1549,19 @@ export function AdminDashboard() {
         ) : null}
       </form> : null}
 
-      {activeSection === "applications" && error ? (
+      {adminRole === "admin" && activeSection === "applications" && error ? (
         <p className="admin-error" role="alert">
           {error}
         </p>
       ) : null}
 
-      {activeSection === "applications" && loading ? <p className="admin-loading">Loading…</p> : null}
+      {adminRole === "admin" && activeSection === "applications" && loading ? <p className="admin-loading">Loading…</p> : null}
 
-      {activeSection === "applications" && !loading && data && data.items.length === 0 ? (
+      {adminRole === "admin" && activeSection === "applications" && !loading && data && data.items.length === 0 ? (
         <p className="admin-empty">No applications match your filters.</p>
       ) : null}
 
-      {activeSection === "applications" && !loading && data && data.items.length > 0 ? (
+      {adminRole === "admin" && activeSection === "applications" && !loading && data && data.items.length > 0 ? (
         <>
           <div className="admin-table-wrap">
             <table className="admin-table">
@@ -1600,7 +1661,7 @@ export function AdminDashboard() {
                       </td>
                     </tr>
                     {expandedId === app.id ? (
-                      <tr className="admin-detail-row">
+                      <tr className="admin-detail-row admin-detail-row-compact">
                         <td colSpan={10}>
                           <dl className="admin-detail-grid">
                             <div>
@@ -1643,6 +1704,26 @@ export function AdminDashboard() {
                                 <dd>{new Date(app.accommodationEnrolledAt).toLocaleString("en-IN")}</dd>
                               </div>
                             ) : null}
+                            <div>
+                              <dt>Hosteller allotted</dt>
+                              <dd>{app.hostellerVerificationFromAdmin ? "Yes" : "No"}</dd>
+                            </div>
+                            {app.hostellerVerificationFromAdmin ? (
+                              <>
+                                <div>
+                                  <dt>Hosteller allotted by</dt>
+                                  <dd>{app.hostellerVerifiedByAdminEmail || "—"}</dd>
+                                </div>
+                                <div>
+                                  <dt>Hosteller allotted at</dt>
+                                  <dd>
+                                    {app.hostellerVerificationAt
+                                      ? new Date(app.hostellerVerificationAt).toLocaleString("en-IN")
+                                      : "—"}
+                                  </dd>
+                                </div>
+                              </>
+                            ) : null}
                           </dl>
                         </td>
                       </tr>
@@ -1677,7 +1758,7 @@ export function AdminDashboard() {
         </>
       ) : null}
 
-      {activeSection === "notices" ? (
+      {adminRole === "admin" && activeSection === "notices" ? (
         <section className="admin-notices-layout">
           <form className="admin-filters admin-notice-form" onSubmit={saveNotice}>
             <h2>{noticeForm.id ? "Edit notice" : "Create notice"}</h2>
@@ -1941,7 +2022,11 @@ export function AdminDashboard() {
                 type="button"
                 className="btn btn-green btn-sm"
                 onClick={() => void enrollHosteller(true)}
-                disabled={!hostellerLookupResult || hostellerEnrollLoading}
+                disabled={
+                  !hostellerLookupResult ||
+                  hostellerEnrollLoading ||
+                  !hostellerLookupResult.isVerifiedByAdmin
+                }
               >
                 {hostellerEnrollLoading ? "Saving..." : "Enroll as hosteller"}
               </button>
@@ -1965,7 +2050,28 @@ export function AdminDashboard() {
               </p>
             ) : null}
             {hostellerLookupResult ? (
-              <div className="admin-detail-row" style={{ marginTop: 12 }}>
+              <div
+                className={`admin-hosteller-lookup-status ${
+                  hostellerLookupResult.hostellerVerificationFromAdmin
+                    ? "admin-hosteller-lookup-status-green"
+                    : "admin-hosteller-lookup-status-red"
+                }`}
+                style={{ marginTop: 12 }}
+              >
+                {hostellerLookupResult.hostellerVerificationFromAdmin
+                  ? "Hostel status: already allotted."
+                  : "Hostel status: not allotted yet."}
+              </div>
+            ) : null}
+            {hostellerLookupResult ? (
+              <div
+                className={`admin-detail-row admin-hosteller-detail-compact ${
+                  hostellerLookupResult.isVerifiedByAdmin
+                    ? "admin-hosteller-detail-green"
+                    : "admin-hosteller-detail-red"
+                }`}
+                style={{ marginTop: 8 }}
+              >
                 <dl className="admin-detail-grid">
                   <div>
                     <dt>Name</dt>
@@ -1988,8 +2094,16 @@ export function AdminDashboard() {
                     <dd>{hostellerLookupResult.subpart}</dd>
                   </div>
                   <div>
-                    <dt>Hosteller (Admin verified)</dt>
+                    <dt>Applications Verify</dt>
+                    <dd>{hostellerLookupResult.isVerifiedByAdmin ? "Verified" : "Not Verified"}</dd>
+                  </div>
+                  <div>
+                    <dt>Hosteller Enrollment</dt>
                     <dd>{hostellerLookupResult.hostellerVerificationFromAdmin ? "Yes" : "No"}</dd>
+                  </div>
+                  <div>
+                    <dt>Verified by (email)</dt>
+                    <dd>{hostellerLookupResult.hostellerVerifiedByAdminEmail || "—"}</dd>
                   </div>
                 </dl>
               </div>
@@ -2010,17 +2124,18 @@ export function AdminDashboard() {
                   <th>College</th>
                   <th>Branch</th>
                   <th>Module</th>
+                  <th>Verified By</th>
                   <th>Verified At</th>
                 </tr>
               </thead>
               <tbody>
                 {hostellerLoading ? (
                   <tr>
-                    <td colSpan={6}>Loading hostellers...</td>
+                    <td colSpan={7}>Loading hostellers...</td>
                   </tr>
                 ) : hostellers.length === 0 ? (
                   <tr>
-                    <td colSpan={6}>No admin-verified hostellers yet.</td>
+                    <td colSpan={7}>No admin-verified hostellers yet.</td>
                   </tr>
                 ) : (
                   hostellers.map((student) => (
@@ -2030,6 +2145,7 @@ export function AdminDashboard() {
                       <td>{student.collegeName}</td>
                       <td>{student.subject}</td>
                       <td>{student.subpart}</td>
+                      <td>{student.hostellerVerifiedByAdminEmail || "—"}</td>
                       <td>
                         {student.hostellerVerificationAt
                           ? new Date(student.hostellerVerificationAt).toLocaleString("en-IN")
@@ -2044,7 +2160,7 @@ export function AdminDashboard() {
         </section>
       ) : null}
 
-      {activeSection === "attendance" ? <AdminAttendance /> : null}
+      {adminRole === "admin" && activeSection === "attendance" ? <AdminAttendance /> : null}
     </div>
   );
 }

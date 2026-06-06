@@ -17,7 +17,7 @@ function clean(value: unknown): string {
 
 export async function GET(request: Request) {
   try {
-    if (!(await getAdminSessionFromRequest(request))) {
+    if (!(await getAdminSessionFromRequest(request, ["admin", "hostel_admin"]))) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -35,7 +35,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    if (!(await getAdminSessionFromRequest(request))) {
+    const session = await getAdminSessionFromRequest(request, ["admin", "hostel_admin"]);
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -48,12 +49,28 @@ export async function POST(request: Request) {
     const enroll = body.enroll !== false;
 
     await connectDB();
+    if (enroll) {
+      const candidate = await Application.findOne({ internId })
+        .select({ isVerifiedByAdmin: 1 })
+        .lean();
+      if (!candidate) {
+        return NextResponse.json({ error: "Student not found for this Intern ID." }, { status: 404 });
+      }
+      if (!candidate.isVerifiedByAdmin) {
+        return NextResponse.json(
+          { error: "Student is not verified in Applications Verify. Cannot enroll as hosteller." },
+          { status: 400 },
+        );
+      }
+    }
+
     const updated = await Application.findOneAndUpdate(
       { internId },
       {
         $set: {
           hostellerVerificationFromAdmin: enroll,
           hostellerVerificationAt: enroll ? new Date() : null,
+          hostellerVerifiedByAdminEmail: enroll ? session.email : null,
         },
       },
       { new: true },

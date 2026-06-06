@@ -3059,6 +3059,25 @@ img {
   grid-column: 1 / -1;
 }
 
+.admin-detail-row-compact td {
+  padding: 8px 10px;
+}
+
+.admin-detail-row-compact .admin-detail-grid {
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 8px 14px;
+}
+
+.admin-detail-row-compact .admin-detail-grid dt {
+  font-size: 0.68rem;
+  margin-bottom: 1px;
+}
+
+.admin-detail-row-compact .admin-detail-grid dd {
+  font-size: 0.84rem;
+  line-height: 1.25;
+}
+
 .admin-pagination {
   display: flex;
   align-items: center;
@@ -3157,6 +3176,57 @@ img {
   border-color: #c62828;
   background: #fff5f5;
   color: #b71c1c;
+}
+
+.admin-hosteller-lookup-status {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.admin-hosteller-lookup-status-green {
+  background: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #a5d6a7;
+}
+
+.admin-hosteller-lookup-status-red {
+  background: #ffebee;
+  color: #b71c1c;
+  border: 1px solid #ef9a9a;
+}
+
+.admin-hosteller-detail-green td,
+.admin-hosteller-detail-green {
+  background: #e8f5e9 !important;
+  border: 1px solid #a5d6a7;
+}
+
+.admin-hosteller-detail-red td,
+.admin-hosteller-detail-red {
+  background: #ffebee !important;
+  border: 1px solid #ef9a9a;
+}
+
+.admin-hosteller-detail-compact {
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.admin-hosteller-detail-compact .admin-detail-grid {
+  grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+  gap: 8px 14px;
+}
+
+.admin-hosteller-detail-compact .admin-detail-grid dt {
+  font-size: 0.68rem;
+  margin-bottom: 1px;
+}
+
+.admin-hosteller-detail-compact .admin-detail-grid dd {
+  font-size: 0.84rem;
+  line-height: 1.25;
 }
 
 .admin-muted {

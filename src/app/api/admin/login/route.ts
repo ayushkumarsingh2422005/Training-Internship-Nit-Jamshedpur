@@ -12,12 +12,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Email and password are required." }, { status: 400 });
     }
 
-    if (!verifyAdminCredentials(email, password)) {
+    const auth = verifyAdminCredentials(email, password);
+    if (!auth.ok) {
       return NextResponse.json({ error: "Invalid admin credentials." }, { status: 401 });
     }
 
-    const token = await createAdminSessionToken(email);
-    const response = NextResponse.json({ success: true });
+    const token = await createAdminSessionToken(email, auth.role);
+    const response = NextResponse.json({ success: true, role: auth.role });
     response.cookies.set(adminSessionCookie.name, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

@@ -24,6 +24,7 @@ export type DbApplicationInput = {
   verifiedByAdminAt?: unknown;
   hostellerVerificationFromAdmin?: boolean;
   hostellerVerificationAt?: unknown;
+  hostellerVerifiedByAdminEmail?: string | null;
 };
 
 export function toApplicationResponse(doc: DbApplicationInput): Application {
@@ -87,5 +88,6 @@ export function toApplicationResponse(doc: DbApplicationInput): Application {
     internId: doc.internId?.trim() || null,
     hostellerVerificationFromAdmin: Boolean(doc.hostellerVerificationFromAdmin),
     hostellerVerificationAt,
+    hostellerVerifiedByAdminEmail: doc.hostellerVerifiedByAdminEmail?.trim() || null,
   };
 }

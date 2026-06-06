@@ -2,8 +2,10 @@ const ADMIN_SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
 const COOKIE_NAME = "admin_session";
 const textEncoder = new TextEncoder();
 
+export type AdminRole = "admin" | "hostel_admin";
+
 export type AdminSessionPayload = {
-  role: "admin";
+  role: AdminRole;
   email: string;
   exp: number;
 };
@@ -37,9 +39,12 @@ async function sign(data: string): Promise<string> {
   return Buffer.from(signature).toString("base64url");
 }
 
-export async function createAdminSessionToken(adminEmail: string): Promise<string> {
+export async function createAdminSessionToken(
+  adminEmail: string,
+  role: AdminRole = "admin",
+): Promise<string> {
   const payload: AdminSessionPayload = {
-    role: "admin",
+    role,
     email: adminEmail.trim().toLowerCase(),
     exp: Date.now() + ADMIN_SESSION_TTL_MS,
   };
@@ -56,7 +61,8 @@ export async function verifyAdminSessionToken(token: string): Promise<AdminSessi
     if (!timingSafeEqualStr(signature, expected)) return null;
 
     const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf-8")) as AdminSessionPayload;
-    if (payload.role !== "admin" || !payload.email || !payload.exp) return null;
+    if (!payload.email || !payload.exp) return null;
+    if (payload.role !== "admin" && payload.role !== "hostel_admin") return null;
     if (Date.now() > payload.exp) return null;
 
     return payload;
@@ -65,7 +71,10 @@ export async function verifyAdminSessionToken(token: string): Promise<AdminSessi
   }
 }
 
-export async function getAdminSessionFromRequest(request: Request): Promise<AdminSessionPayload | null> {
+export async function getAdminSessionFromRequest(
+  request: Request,
+  allowedRoles: AdminRole[] = ["admin"],
+): Promise<AdminSessionPayload | null> {
   const cookieHeader = request.headers.get("cookie");
   if (!cookieHeader) return null;
 
@@ -73,7 +82,10 @@ export async function getAdminSessionFromRequest(request: Request): Promise<Admi
   const token = match?.[1] ? decodeURIComponent(match[1]) : null;
   if (!token) return null;
 
-  return verifyAdminSessionToken(token);
+  const session = await verifyAdminSessionToken(token);
+  if (!session) return null;
+  if (!allowedRoles.includes(session.role)) return null;
+  return session;
 }
 
 export const adminSessionCookie = {
