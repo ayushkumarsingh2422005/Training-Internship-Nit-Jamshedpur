@@ -48,6 +48,32 @@ type AdminNotice = {
   isPublished: boolean;
 };
 
+type AdminCourseFeedback = {
+  id: string;
+  internId: string | null;
+  fullName: string;
+  email: string;
+  subject: string;
+  subpart: string;
+  message: string;
+  createdAt: string | null;
+};
+
+type AdminApplicationRequest = {
+  id: string;
+  internId: string | null;
+  fullName: string;
+  email: string;
+  subject: string;
+  subpart: string;
+  requestText: string;
+  status: "pending" | "approved" | "rejected";
+  adminRemark: string | null;
+  reviewedByEmail: string | null;
+  reviewedAt: string | null;
+  createdAt: string | null;
+};
+
 type NoticeForm = {
   id: string | null;
   title: string;
@@ -212,9 +238,16 @@ export function AdminDashboard() {
   const [showStudentModal, setShowStudentModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [applicationMessage, setApplicationMessage] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<"applications" | "notices" | "hostellers" | "attendance">(
-    "applications",
-  );
+  const [activeSection, setActiveSection] = useState<
+    "applications" | "notices" | "feedback" | "application-requests" | "hostellers" | "attendance"
+  >("applications");
+  const [feedbackItems, setFeedbackItems] = useState<AdminCourseFeedback[]>([]);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
+  const [requestItems, setRequestItems] = useState<AdminApplicationRequest[]>([]);
+  const [requestLoading, setRequestLoading] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [requestSavingId, setRequestSavingId] = useState<string | null>(null);
   const [hostellers, setHostellers] = useState<AdminApplication[]>([]);
   const [hostellerLoading, setHostellerLoading] = useState(false);
   const [hostellerError, setHostellerError] = useState<string | null>(null);
@@ -231,6 +264,9 @@ export function AdminDashboard() {
     loading ||
     noticeLoading ||
     noticeSaving ||
+    feedbackLoading ||
+    requestLoading ||
+    requestSavingId !== null ||
     studentSaving ||
     bulkSaving ||
     deletingApplicationId !== null ||
@@ -335,6 +371,50 @@ export function AdminDashboard() {
     }
   }, [router]);
 
+  const loadFeedback = useCallback(async () => {
+    setFeedbackLoading(true);
+    setFeedbackError(null);
+    try {
+      const response = await fetch("/api/admin/course-feedback");
+      if (response.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
+      const json = (await response.json()) as { items?: AdminCourseFeedback[]; error?: string };
+      if (!response.ok) {
+        setFeedbackError(json.error ?? "Failed to load feedback.");
+        return;
+      }
+      setFeedbackItems(json.items ?? []);
+    } catch {
+      setFeedbackError("Network error while loading feedback.");
+    } finally {
+      setFeedbackLoading(false);
+    }
+  }, [router]);
+
+  const loadApplicationRequests = useCallback(async () => {
+    setRequestLoading(true);
+    setRequestError(null);
+    try {
+      const response = await fetch("/api/admin/application-requests");
+      if (response.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
+      const json = (await response.json()) as { items?: AdminApplicationRequest[]; error?: string };
+      if (!response.ok) {
+        setRequestError(json.error ?? "Failed to load application requests.");
+        return;
+      }
+      setRequestItems(json.items ?? []);
+    } catch {
+      setRequestError("Network error while loading application requests.");
+    } finally {
+      setRequestLoading(false);
+    }
+  }, [router]);
+
   const loadHostellers = useCallback(async () => {
     setHostellerLoading(true);
     setHostellerError(null);
@@ -373,8 +453,12 @@ export function AdminDashboard() {
     if (!adminRole) return;
     if (activeSection === "hostellers") {
       void loadHostellers();
+    } else if (adminRole === "admin" && activeSection === "feedback") {
+      void loadFeedback();
+    } else if (adminRole === "admin" && activeSection === "application-requests") {
+      void loadApplicationRequests();
     }
-  }, [activeSection, adminRole, loadHostellers]);
+  }, [activeSection, adminRole, loadHostellers, loadFeedback, loadApplicationRequests]);
 
   const stopHostellerScanner = useCallback(() => {
     if (hostellerStreamRef.current) {
@@ -1008,6 +1092,43 @@ export function AdminDashboard() {
     }
   }
 
+  async function updateApplicationRequestStatus(
+    item: AdminApplicationRequest,
+    status: "approved" | "rejected",
+  ) {
+    const remark = window.prompt(
+      status === "approved"
+        ? "Optional remark for approval:"
+        : "Optional remark for rejection:",
+      item.adminRemark ?? "",
+    );
+    if (remark === null) return;
+
+    setRequestSavingId(item.id);
+    setRequestError(null);
+    try {
+      const response = await fetch("/api/admin/application-requests", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id, status, adminRemark: remark }),
+      });
+      if (response.status === 401) {
+        router.push("/admin/login");
+        return;
+      }
+      const json = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        setRequestError(json.error ?? "Failed to update request status.");
+        return;
+      }
+      await loadApplicationRequests();
+    } catch {
+      setRequestError("Network error while updating request.");
+    } finally {
+      setRequestSavingId(null);
+    }
+  }
+
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 1;
   const subjectOptions = Array.from(new Set([...(data?.filters.subjects ?? []), studentForm.subject].filter(Boolean)));
   const subpartOptions = Array.from(new Set([...(data?.filters.subparts ?? []), studentForm.subpart].filter(Boolean)));
@@ -1060,6 +1181,20 @@ export function AdminDashboard() {
               onClick={() => setActiveSection("notices")}
             >
               Notices
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm ${activeSection === "feedback" ? "btn-green" : "btn-secondary"}`}
+              onClick={() => setActiveSection("feedback")}
+            >
+              Course Feedback
+            </button>
+            <button
+              type="button"
+              className={`btn btn-sm ${activeSection === "application-requests" ? "btn-green" : "btn-secondary"}`}
+              onClick={() => setActiveSection("application-requests")}
+            >
+              Application Requests
             </button>
           </>
         ) : null}
@@ -1980,6 +2115,163 @@ export function AdminDashboard() {
                 {noticeError}
               </p>
             ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {adminRole === "admin" && activeSection === "feedback" ? (
+        <section className="admin-notices-layout">
+          <div className="admin-filters admin-notice-form">
+            <h2>Course feedback submissions</h2>
+            <p className="admin-muted">
+              Students can submit multiple course feedback entries. Latest entries are shown first.
+            </p>
+            <div className="admin-filters-actions">
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => void loadFeedback()}>
+                Refresh feedback
+              </button>
+            </div>
+            {feedbackError ? (
+              <p className="admin-error" role="alert">
+                {feedbackError}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Intern ID</th>
+                  <th>Name</th>
+                  <th>Branch</th>
+                  <th>Module</th>
+                  <th>Feedback</th>
+                  <th>Submitted At</th>
+                </tr>
+              </thead>
+              <tbody>
+                {feedbackLoading ? (
+                  <tr>
+                    <td colSpan={6}>Loading feedback...</td>
+                  </tr>
+                ) : feedbackItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={6}>No course feedback submitted yet.</td>
+                  </tr>
+                ) : (
+                  feedbackItems.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.internId || "—"}</td>
+                      <td>
+                        {item.fullName}
+                        <br />
+                        <span className="admin-muted">{item.email}</span>
+                      </td>
+                      <td>{item.subject}</td>
+                      <td>{item.subpart}</td>
+                      <td>{item.message}</td>
+                      <td>{item.createdAt ? new Date(item.createdAt).toLocaleString("en-IN") : "—"}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+
+      {adminRole === "admin" && activeSection === "application-requests" ? (
+        <section className="admin-notices-layout">
+          <div className="admin-filters admin-notice-form">
+            <h2>Student application requests</h2>
+            <p className="admin-muted">
+              Review written requests submitted by students and mark them approved or rejected.
+            </p>
+            <div className="admin-filters-actions">
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => void loadApplicationRequests()}
+              >
+                Refresh requests
+              </button>
+            </div>
+            {requestError ? (
+              <p className="admin-error" role="alert">
+                {requestError}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Intern ID</th>
+                  <th>Name</th>
+                  <th>Branch</th>
+                  <th>Request</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {requestLoading ? (
+                  <tr>
+                    <td colSpan={6}>Loading requests...</td>
+                  </tr>
+                ) : requestItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={6}>No application requests submitted yet.</td>
+                  </tr>
+                ) : (
+                  requestItems.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.internId || "—"}</td>
+                      <td>
+                        {item.fullName}
+                        <br />
+                        <span className="admin-muted">{item.email}</span>
+                      </td>
+                      <td>
+                        {item.subject} / {item.subpart}
+                      </td>
+                      <td>
+                        {item.requestText}
+                        {item.adminRemark ? (
+                          <>
+                            <br />
+                            <span className="admin-muted">Remark: {item.adminRemark}</span>
+                          </>
+                        ) : null}
+                      </td>
+                      <td>{item.status}</td>
+                      <td>
+                        <div className="admin-row-actions">
+                          <button
+                            type="button"
+                            className="btn btn-green btn-sm"
+                            onClick={() => void updateApplicationRequestStatus(item, "approved")}
+                            disabled={requestSavingId === item.id}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-red btn-sm"
+                            onClick={() => void updateApplicationRequestStatus(item, "rejected")}
+                            disabled={requestSavingId === item.id}
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </section>
       ) : null}

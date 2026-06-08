@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { StudentAttendancePanel } from "@/components/StudentAttendancePanel";
+import { StudentCourseFeedbackPanel } from "@/components/StudentCourseFeedbackPanel";
+import { StudentApplicationRequestPanel } from "@/components/StudentApplicationRequestPanel";
 import {
   authHeaders,
   clearStudentSession,
@@ -19,7 +21,7 @@ type LookupState =
   | { status: "not-shortlisted" }
   | { status: "error"; message: string };
 
-type ProfileTab = "info" | "attendance" | "certificate";
+type ProfileTab = "info" | "attendance" | "feedback" | "application-request" | "certificate";
 
 export function ShortlistLookup() {
   const [email, setEmail] = useState("");
@@ -246,6 +248,24 @@ export function ShortlistLookup() {
               <button
                 type="button"
                 role="tab"
+                aria-selected={activeTab === "feedback"}
+                className={`profile-tab${activeTab === "feedback" ? " active" : ""}`}
+                onClick={() => setActiveTab("feedback")}
+              >
+                Course Feedback
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "application-request"}
+                className={`profile-tab${activeTab === "application-request" ? " active" : ""}`}
+                onClick={() => setActiveTab("application-request")}
+              >
+                Application Request
+              </button>
+              <button
+                type="button"
+                role="tab"
                 aria-selected={activeTab === "certificate"}
                 className={`profile-tab${activeTab === "certificate" ? " active" : ""}`}
                 onClick={() => setActiveTab("certificate")}
@@ -277,6 +297,10 @@ export function ShortlistLookup() {
               ) : null}
 
               {activeTab === "attendance" ? <StudentAttendancePanel /> : null}
+
+              {activeTab === "feedback" ? <StudentCourseFeedbackPanel /> : null}
+
+              {activeTab === "application-request" ? <StudentApplicationRequestPanel /> : null}
 
               {activeTab === "certificate" ? (
                 <div className="profile-result-placeholder">

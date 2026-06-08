@@ -3229,6 +3229,44 @@ img {
   line-height: 1.25;
 }
 
+.student-feedback-form {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.student-feedback-list {
+  margin-top: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.student-feedback-item {
+  padding: 10px 12px;
+  border: 1px solid #d5e3d6;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.student-feedback-item p {
+  margin: 0 0 6px;
+}
+
+.status-pending {
+  color: #8d6e63;
+  font-weight: 700;
+}
+
+.status-approved {
+  color: #1b5e20;
+  font-weight: 700;
+}
+
+.status-rejected {
+  color: #b71c1c;
+  font-weight: 700;
+}
+
 .admin-muted {
   font-size: 0.8rem;
   color: #666;
