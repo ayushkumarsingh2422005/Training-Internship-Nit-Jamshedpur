@@ -144,6 +144,12 @@ export type Result = {
   fileUrl?: string;
 };
 
+export type WinnerPoster = {
+  id: string;
+  title: string;
+  imageUrl: string;
+};
+
 export const notices: Notice[] = [
   {
     id: "n7",
@@ -187,6 +193,19 @@ export const results: Result[] = [
   },
 ];
 
+export const winnerPosters: WinnerPoster[] = [
+  {
+    id: "w-lab-python-quiz",
+    title: "Python Programming QUIZ WINNERS (Lab)",
+    imageUrl: "/winners/Python Programming QUIZ WINNERS (Lab)🥇🏆.png",
+  },
+  {
+    id: "w-theory-python-quiz",
+    title: "Python Programming QUIZ WINNERS (Theory)",
+    imageUrl: "/winners/Python Programming QUIZ WINNERS (Theory)🥇🏆.png",
+  },
+];
+
 export const studentPortalPath = "/student-portal" as const;
 
 export const navLinks = [
@@ -194,6 +213,7 @@ export const navLinks = [
   { href: "/about", label: "About the Programme" },
   { href: "/program", label: "Training Modules" },
   { href: "/notices", label: "Notices" },
+  { href: "/winners", label: "Winners" },
   { href: studentPortalPath, label: "Login & Profile" },
   { href: "/contact", label: "Contact" },
 ] as const;

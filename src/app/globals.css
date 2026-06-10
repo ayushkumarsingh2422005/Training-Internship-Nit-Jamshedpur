@@ -1182,6 +1182,47 @@ img {
   text-decoration: underline;
 }
 
+.winners-grid {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 900px) {
+  .winners-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.winner-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.winner-card-head {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  background: #f8faf9;
+}
+
+.winner-card-head h3 {
+  margin: 0;
+  color: var(--green-dark);
+  font-size: 1rem;
+}
+
+.winner-poster-link {
+  display: block;
+}
+
+.winner-poster {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
 .dashboard-banner {
   padding: 36px 0 44px;
   background: var(--green-pale);

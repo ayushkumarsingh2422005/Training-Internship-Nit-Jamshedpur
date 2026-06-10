@@ -27,6 +27,11 @@ const staticRoutes: MetadataRoute.Sitemap = [
     priority: 0.9,
   },
   {
+    url: `${getSiteUrl()}/winners`,
+    changeFrequency: "weekly",
+    priority: 0.8,
+  },
+  {
     url: `${getSiteUrl()}${studentPortalPath}`,
     changeFrequency: "weekly",
     priority: 0.95,
