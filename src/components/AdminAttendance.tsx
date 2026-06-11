@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   type AttendanceSessionType,
@@ -64,6 +64,33 @@ function parseMachineAttendanceTxt(content: string, selectedDate: string): Set<s
     if (mapped) presentInternIds.add(mapped);
   }
   return presentInternIds;
+}
+
+function internIdSortValue(internId: string | null): number | null {
+  const normalized = internId?.trim().toUpperCase();
+  if (!normalized) return null;
+  const match = normalized.match(/(\d+)$/);
+  if (!match) return null;
+  const value = Number.parseInt(match[1], 10);
+  return Number.isFinite(value) ? value : null;
+}
+
+function compareStudentsByInternId(a: AttendanceStudentRow, b: AttendanceStudentRow): number {
+  const aNumeric = internIdSortValue(a.internId);
+  const bNumeric = internIdSortValue(b.internId);
+
+  if (aNumeric !== null && bNumeric !== null && aNumeric !== bNumeric) {
+    return aNumeric - bNumeric;
+  }
+  if (aNumeric !== null && bNumeric === null) return -1;
+  if (aNumeric === null && bNumeric !== null) return 1;
+
+  const aIntern = a.internId?.trim().toUpperCase() ?? "";
+  const bIntern = b.internId?.trim().toUpperCase() ?? "";
+  const internCompare = aIntern.localeCompare(bIntern);
+  if (internCompare !== 0) return internCompare;
+
+  return a.fullName.localeCompare(b.fullName);
 }
 
 export function AdminAttendance() {
@@ -328,6 +355,10 @@ export function AdminAttendance() {
   const presentCount = students.filter((student) => student.status === "present").length;
   const absentCount = students.filter((student) => student.status === "absent").length;
   const rosterReady = students.length > 0;
+  const sortedStudents = useMemo(
+    () => [...students].sort(compareStudentsByInternId),
+    [students],
+  );
 
   return (
     <section className="admin-attendance">
@@ -458,7 +489,7 @@ export function AdminAttendance() {
                 </tr>
               </thead>
               <tbody>
-                {students.map((student, index) => (
+                {sortedStudents.map((student, index) => (
                   <tr
                     key={student.id}
                     className={
