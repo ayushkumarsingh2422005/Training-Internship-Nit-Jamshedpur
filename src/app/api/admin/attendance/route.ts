@@ -64,7 +64,7 @@ export async function GET(request: Request) {
     }
 
     const [applications, existingSession] = await Promise.all([
-      Application.find({ subpart: moduleName }).sort({ fullName: 1 }).lean(),
+      Application.find({ subpart: moduleName, isVerifiedByAdmin: true }).sort({ fullName: 1 }).lean(),
       AttendanceSession.findOne({ date, module: moduleName, sessionType }).lean(),
     ]);
 
@@ -166,7 +166,7 @@ export async function PUT(request: Request) {
     await connectDB();
 
     const moduleStudentIds = new Set(
-      (await Application.find({ subpart: moduleName }).select("_id").lean()).map((application) =>
+      (await Application.find({ subpart: moduleName, isVerifiedByAdmin: true }).select("_id").lean()).map((application) =>
         application._id.toString(),
       ),
     );
