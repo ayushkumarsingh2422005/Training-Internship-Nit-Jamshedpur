@@ -8,6 +8,7 @@ import { AdminAttendance } from "@/components/AdminAttendance";
 import { useTopLoading } from "@/components/TopLoadingProvider";
 import { downloadIdCardsPdf, type IdCardProgress } from "@/lib/id-card-pdf";
 import { COLLEGE_DROPDOWN_OPTIONS, COLLEGE_OTHER } from "@/lib/government-colleges";
+import { AdminTeachers } from "@/components/AdminTeachers";
 
 type AppliedFilters = {
   q: string;
@@ -239,7 +240,7 @@ export function AdminDashboard() {
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [applicationMessage, setApplicationMessage] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<
-    "applications" | "notices" | "feedback" | "application-requests" | "hostellers" | "attendance"
+    "applications" | "notices" | "feedback" | "application-requests" | "hostellers" | "attendance" | "teachers"
   >("applications");
   const [feedbackItems, setFeedbackItems] = useState<AdminCourseFeedback[]>([]);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
@@ -1196,6 +1197,13 @@ export function AdminDashboard() {
             >
               Application Requests
             </button>
+            <button
+              type="button"
+              className={`btn btn-sm ${activeSection === "teachers" ? "btn-green" : "btn-secondary"}`}
+              onClick={() => setActiveSection("teachers")}
+            >
+              Teachers
+            </button>
           </>
         ) : null}
         <button
@@ -1215,6 +1223,8 @@ export function AdminDashboard() {
           </button>
         ) : null}
       </div>
+
+      {adminRole === "admin" && activeSection === "teachers" ? <AdminTeachers /> : null}
 
       {adminRole === "admin" && activeSection === "applications" && data ? (
         <div className="admin-stats">

@@ -214,7 +214,8 @@ export const navLinks = [
   { href: "/program", label: "Training Modules" },
   { href: "/notices", label: "Notices" },
   { href: "/winners", label: "Winners" },
-  { href: studentPortalPath, label: "Login & Profile" },
+  { href: studentPortalPath, label: "Student Login" },
+  { href: "/teacher-portal", label: "Teacher Login" },
   { href: "/contact", label: "Contact" },
 ] as const;
 

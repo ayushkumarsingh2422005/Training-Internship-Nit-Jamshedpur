@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { StudentAttendancePanel } from "@/components/StudentAttendancePanel";
 import { StudentCourseFeedbackPanel } from "@/components/StudentCourseFeedbackPanel";
 import { StudentApplicationRequestPanel } from "@/components/StudentApplicationRequestPanel";
+import { StudentExamsPanel } from "@/components/StudentExamsPanel";
 import {
   authHeaders,
   clearStudentSession,
@@ -21,7 +22,7 @@ type LookupState =
   | { status: "not-shortlisted" }
   | { status: "error"; message: string };
 
-type ProfileTab = "info" | "attendance" | "feedback" | "application-request" | "certificate";
+type ProfileTab = "info" | "attendance" | "feedback" | "application-request" | "certificate" | "exams";
 
 export function ShortlistLookup() {
   const [email, setEmail] = useState("");
@@ -272,6 +273,15 @@ export function ShortlistLookup() {
               >
                 Certificate
               </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "exams"}
+                className={`profile-tab${activeTab === "exams" ? " active" : ""}`}
+                onClick={() => setActiveTab("exams")}
+              >
+                Exams
+              </button>
             </div>
 
             <div className="profile-tab-panel">
@@ -308,6 +318,8 @@ export function ShortlistLookup() {
                   <p>This tab is reserved for certificate preview/download in future.</p>
                 </div>
               ) : null}
+
+              {activeTab === "exams" ? <StudentExamsPanel /> : null}
             </div>
           </div>
         ) : null}
