@@ -17,6 +17,30 @@ export function getQuestionElapsed(
   return timings?.find((t) => t.questionId === questionId)?.elapsedSeconds ?? 0;
 }
 
+export function getQuestionRemainingSeconds(
+  limitSeconds: number,
+  timings: QuestionTiming[] | undefined,
+  questionId: string,
+  sessionStartMs?: number,
+): number {
+  if (limitSeconds <= 0) return 0;
+  let elapsed = getQuestionElapsed(timings, questionId);
+  if (sessionStartMs) {
+    elapsed += Math.floor((Date.now() - sessionStartMs) / 1000);
+  }
+  return Math.max(0, limitSeconds - Math.min(elapsed, limitSeconds));
+}
+
+export function isQuestionTimeExpired(
+  limitSeconds: number,
+  timings: QuestionTiming[] | undefined,
+  questionId: string,
+  sessionStartMs?: number,
+): boolean {
+  if (limitSeconds <= 0) return false;
+  return getQuestionRemainingSeconds(limitSeconds, timings, questionId, sessionStartMs) <= 0;
+}
+
 export function upsertQuestionTiming(
   timings: QuestionTiming[],
   questionId: string,

@@ -2,7 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getQuestionElapsed, upsertQuestionTiming, type QuestionTiming } from "@/lib/exam-utils";
+import {
+  getQuestionElapsed,
+  getQuestionRemainingSeconds,
+  isQuestionTimeExpired,
+  upsertQuestionTiming,
+  type QuestionTiming,
+} from "@/lib/exam-utils";
 
 type ExamEngineProps = {
   studentHash: string;
@@ -18,6 +24,15 @@ type ExamQuestion = {
   negativeMarks: number;
   timeLimitSeconds: number;
   type?: string;
+};
+
+type SubmitResult = {
+  totalScore: number;
+  correctQuestions: number;
+  incorrectQuestions: number;
+  unattemptedQuestions: number;
+  accuracyPercentage: number;
+  autoSubmitted?: boolean;
 };
 
 function isFullscreenActive() {
@@ -39,19 +54,26 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [questionTimeLeft, setQuestionTimeLeft] = useState<number | null>(null);
+  const [showTestElapsed, setShowTestElapsed] = useState(false);
+  const [showQuestionElapsed, setShowQuestionElapsed] = useState(false);
   const [questionTimings, setQuestionTimings] = useState<QuestionTiming[]>([]);
   const [isExamActive, setIsExamActive] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [proctorStats, setProctorStats] = useState({ tabSwitches: 0, focusLosses: 0 });
   const [showAutostartPrompt, setShowAutostartPrompt] = useState(false);
+  const [submitResultModal, setSubmitResultModal] = useState<SubmitResult | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const startBtnRef = useRef<HTMLButtonElement>(null);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialTimeLeftRef = useRef(0);
   const questionSessionStartRef = useRef<number>(Date.now());
   const answersRef = useRef<Record<string, unknown>>({});
   const currentQIndexRef = useRef(0);
   const questionTimingsRef = useRef<QuestionTiming[]>([]);
   const autostartHandledRef = useRef(false);
+  const autoSubmitTriggeredRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   answersRef.current = answers;
@@ -107,7 +129,7 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
       if (limitSeconds <= 0) return questionTimingsRef.current;
       const sessionElapsed = Math.floor((Date.now() - questionSessionStartRef.current) / 1000);
       const prevElapsed = getQuestionElapsed(questionTimingsRef.current, qId);
-      const total = prevElapsed + sessionElapsed;
+      const total = Math.min(prevElapsed + sessionElapsed, limitSeconds);
       const updated = upsertQuestionTiming(questionTimingsRef.current, qId, total);
       setQuestionTimings(updated);
       return updated;
@@ -115,15 +137,42 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
     [],
   );
 
+  const isQuestionExpired = useCallback(
+    (q: ExamQuestion, timings: QuestionTiming[] = questionTimingsRef.current) =>
+      isQuestionTimeExpired(q.timeLimitSeconds, timings, q._id),
+    [],
+  );
+
+  const findNavigableIndex = useCallback(
+    (fromIndex: number, direction: -1 | 1, timings: QuestionTiming[] = questionTimingsRef.current) => {
+      let index = fromIndex + direction;
+      while (index >= 0 && index < questions.length) {
+        if (!isQuestionExpired(questions[index], timings)) return index;
+        index += direction;
+      }
+      return null;
+    },
+    [questions, isQuestionExpired],
+  );
+
   const goToQuestion = useCallback(
     (nextIndex: number) => {
+      if (nextIndex < 0 || nextIndex >= questions.length) return;
+
       const currentQ = questions[currentQIndexRef.current];
       let timings = questionTimingsRef.current;
       if (currentQ?.timeLimitSeconds > 0) {
         timings = flushQuestionTime(currentQ._id, currentQ.timeLimitSeconds);
       }
 
+      const nextQ = questions[nextIndex];
+      if (nextQ && isQuestionTimeExpired(nextQ.timeLimitSeconds, timings, nextQ._id)) {
+        alert("Time for this question has expired. You cannot revisit it.");
+        return;
+      }
+
       setCurrentQIndex(nextIndex);
+      setShowQuestionElapsed(false);
       syncToServer({
         currentQuestionIndex: nextIndex,
         questionTimings: timings,
@@ -131,10 +180,8 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
         event: "question_nav",
       });
 
-      const nextQ = questions[nextIndex];
       if (nextQ?.timeLimitSeconds > 0) {
-        const elapsed = getQuestionElapsed(timings, nextQ._id);
-        setQuestionTimeLeft(Math.max(0, nextQ.timeLimitSeconds - elapsed));
+        setQuestionTimeLeft(getQuestionRemainingSeconds(nextQ.timeLimitSeconds, timings, nextQ._id));
         questionSessionStartRef.current = Date.now();
       } else {
         setQuestionTimeLeft(null);
@@ -202,6 +249,7 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
           data.questions.map((q: ExamQuestion) => ({ ...q, type: q.questionType })),
         );
         setTimeLeft(data.timeLeftSeconds);
+        initialTimeLeftRef.current = data.timeLeftSeconds;
         setQuestionTimings(data.questionTimings ?? []);
         setProctorStats({
           tabSwitches: data.tabSwitches ?? 0,
@@ -235,8 +283,13 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
 
         const initialQ = data.questions[qIndex];
         if (initialQ?.timeLimitSeconds > 0) {
-          const elapsed = getQuestionElapsed(data.questionTimings ?? [], initialQ._id);
-          setQuestionTimeLeft(Math.max(0, initialQ.timeLimitSeconds - elapsed));
+          setQuestionTimeLeft(
+            getQuestionRemainingSeconds(
+              initialQ.timeLimitSeconds,
+              data.questionTimings ?? [],
+              initialQ._id,
+            ),
+          );
           questionSessionStartRef.current = Date.now();
         }
       } catch (err: unknown) {
@@ -268,23 +321,26 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
   useEffect(() => {
     if (!isExamActive) return;
 
-    questionSessionStartRef.current = Date.now();
     const currentQ = questions[currentQIndex];
     if (!currentQ || currentQ.timeLimitSeconds <= 0) {
       setQuestionTimeLeft(null);
       return;
     }
 
-    const elapsed = getQuestionElapsed(questionTimingsRef.current, currentQ._id);
-    setQuestionTimeLeft(Math.max(0, currentQ.timeLimitSeconds - elapsed));
+    questionSessionStartRef.current = Date.now();
 
-    const timerId = setInterval(() => {
-      setQuestionTimeLeft((prev) => {
-        if (prev === null || prev <= 1) return 0;
-        return prev - 1;
-      });
-    }, 1000);
+    const updateRemaining = () => {
+      const remaining = getQuestionRemainingSeconds(
+        currentQ.timeLimitSeconds,
+        questionTimingsRef.current,
+        currentQ._id,
+        questionSessionStartRef.current,
+      );
+      setQuestionTimeLeft(remaining);
+    };
 
+    updateRemaining();
+    const timerId = setInterval(updateRemaining, 1000);
     return () => clearInterval(timerId);
   }, [isExamActive, currentQIndex, questions]);
 
@@ -293,19 +349,35 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
     const currentQ = questions[currentQIndex];
     if (!currentQ || currentQ.timeLimitSeconds <= 0) return;
 
-    if (currentQIndex < questions.length - 1) {
-      goToQuestion(currentQIndex + 1);
+    const timings = flushQuestionTime(currentQ._id, currentQ.timeLimitSeconds);
+    const nextIndex = findNavigableIndex(currentQIndex, 1, timings);
+
+    if (nextIndex !== null) {
+      goToQuestion(nextIndex);
     } else {
-      alert("Time limit reached for the last question.");
-      const timings = flushQuestionTime(currentQ._id, currentQ.timeLimitSeconds);
+      alert("Time limit reached for this question.");
       syncToServer({ questionTimings: timings, answers: answersRef.current, event: "question_nav" });
       setQuestionTimeLeft(null);
     }
-  }, [questionTimeLeft, isExamActive, currentQIndex, questions, goToQuestion, flushQuestionTime, syncToServer]);
+  }, [
+    questionTimeLeft,
+    isExamActive,
+    currentQIndex,
+    questions,
+    goToQuestion,
+    flushQuestionTime,
+    findNavigableIndex,
+    syncToServer,
+  ]);
 
   const submitTest = useCallback(
-    async (force = false) => {
+    async (force = false, meta?: { autoExpired?: boolean }) => {
+      if (isSubmitting) return;
       if (!force && !window.confirm("Are you sure you want to submit the test?")) return;
+
+      setIsSubmitting(true);
+      setSubmitError(null);
+
       try {
         const currentQ = questions[currentQIndexRef.current];
         let timings = questionTimingsRef.current;
@@ -332,22 +404,33 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
           await document.exitFullscreen().catch(() => undefined);
         }
 
-        alert(
-          `Test Submitted successfully!\nScore: ${data.result.totalScore}\nCorrect: ${data.result.correctQuestions}\nIncorrect: ${data.result.incorrectQuestions}`,
-        );
         setIsExamActive(false);
-        setTimeout(() => router.push("/student-portal"), 100);
+        setSubmitResultModal({
+          totalScore: data.result.totalScore,
+          correctQuestions: data.result.correctQuestions,
+          incorrectQuestions: data.result.incorrectQuestions,
+          unattemptedQuestions: data.result.unattemptedQuestions,
+          accuracyPercentage: data.result.accuracyPercentage,
+          autoSubmitted: meta?.autoExpired ?? false,
+        });
       } catch (err: unknown) {
-        alert("Submission Error: " + (err instanceof Error ? err.message : "Unknown error"));
+        setSubmitError(err instanceof Error ? err.message : "Unknown error");
+      } finally {
+        setIsSubmitting(false);
       }
     },
-    [questions, flushQuestionTime, syncToServer, studentHash, secureToken, testData, router],
+    [questions, flushQuestionTime, syncToServer, studentHash, secureToken, testData, isSubmitting],
   );
 
+  function closeSubmitResultModal() {
+    setSubmitResultModal(null);
+    router.push("/student-portal");
+  }
+
   useEffect(() => {
-    if (!loading && timeLeft <= 0 && isExamActive) {
-      alert("Time has expired! Submitting test automatically.");
-      submitTest(true);
+    if (!loading && timeLeft <= 0 && isExamActive && !autoSubmitTriggeredRef.current) {
+      autoSubmitTriggeredRef.current = true;
+      submitTest(true, { autoExpired: true });
     }
   }, [timeLeft, loading, isExamActive, submitTest]);
 
@@ -447,7 +530,26 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
     return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   }
 
+  function getExamTimerClass(remainingSeconds: number, totalSeconds: number) {
+    if (totalSeconds <= 0) return "exam-timer--safe";
+    const ratio = remainingSeconds / totalSeconds;
+    if (remainingSeconds <= 300 || ratio <= 0.15) return "exam-timer--critical";
+    if (remainingSeconds <= 900 || ratio <= 0.35) return "exam-timer--warning";
+    return "exam-timer--safe";
+  }
+
   const currentQuestion = questions[currentQIndex];
+  const prevNavIndex = findNavigableIndex(currentQIndex, -1);
+  const nextNavIndex = findNavigableIndex(currentQIndex, 1);
+  const currentQuestionLocked =
+    !!currentQuestion &&
+    currentQuestion.timeLimitSeconds > 0 &&
+    isQuestionTimeExpired(
+      currentQuestion.timeLimitSeconds,
+      questionTimings,
+      currentQuestion._id,
+      questionSessionStartRef.current,
+    );
 
   if (loading) {
     return (
@@ -554,16 +656,18 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
               </span>
             </div>
             <div className="exam-header-actions">
-              {questionTimeLeft !== null && currentQuestion?.timeLimitSeconds > 0 && (
-                <div
-                  className={`exam-q-timer${questionTimeLeft <= 10 ? " exam-q-timer--urgent" : ""}`}
-                >
-                  Q timer: {formatTime(questionTimeLeft)}
-                </div>
-              )}
-              <div className="exam-timer">{formatTime(timeLeft)}</div>
-              <button type="button" className="exam-finish-btn" onClick={() => submitTest(false)}>
-                Finish exam
+              <button
+                type="button"
+                className={`exam-timer exam-timer--toggle ${getExamTimerClass(timeLeft, initialTimeLeftRef.current)}`}
+                onClick={() => setShowTestElapsed((prev) => !prev)}
+                title={showTestElapsed ? "Click to show time remaining" : "Click to show time elapsed"}
+              >
+                {showTestElapsed
+                  ? `Elapsed: ${formatTime(Math.max(0, initialTimeLeftRef.current - timeLeft))}`
+                  : `Left: ${formatTime(timeLeft)}`}
+              </button>
+              <button type="button" className="exam-finish-btn" onClick={() => submitTest(false)} disabled={isSubmitting}>
+                {isSubmitting ? "Submitting…" : "Finish exam"}
               </button>
             </div>
           </header>
@@ -574,10 +678,21 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
                 <div className="exam-question-head">
                   <h2>Question {currentQIndex + 1}</h2>
                   <div className="exam-question-badges">
-                    {currentQuestion?.timeLimitSeconds > 0 && (
-                      <span className="exam-badge exam-badge--warn">
-                        Limit: {currentQuestion.timeLimitSeconds}s
-                      </span>
+                    {currentQuestion?.timeLimitSeconds > 0 && questionTimeLeft !== null && (
+                      <button
+                        type="button"
+                        className={`exam-q-timer exam-timer--toggle${questionTimeLeft <= 10 ? " exam-q-timer--urgent" : ""}`}
+                        onClick={() => setShowQuestionElapsed((prev) => !prev)}
+                        title={
+                          showQuestionElapsed
+                            ? "Click to show question time remaining"
+                            : "Click to show question time elapsed"
+                        }
+                      >
+                        {showQuestionElapsed
+                          ? `Q elapsed: ${formatTime(Math.max(0, currentQuestion.timeLimitSeconds - questionTimeLeft))}`
+                          : `Q left: ${formatTime(questionTimeLeft)}`}
+                      </button>
                     )}
                     <span className="exam-badge">{currentQuestion?.type}</span>
                   </div>
@@ -585,7 +700,13 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
 
                 <div className="exam-question-text">{currentQuestion?.questionText}</div>
 
-                <div className="exam-options">
+                {currentQuestionLocked ? (
+                  <p className="exam-question-expired-notice">
+                    Time for this question has expired. You cannot change your answer.
+                  </p>
+                ) : null}
+
+                <div className={`exam-options${currentQuestionLocked ? " exam-options--locked" : ""}`}>
                   {currentQuestion?.type === "Single Correct" &&
                     currentQuestion.options.map((opt) => (
                       <label
@@ -596,6 +717,7 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
                           type="radio"
                           name={currentQuestion._id}
                           checked={answers[currentQuestion._id] === opt._id}
+                          disabled={currentQuestionLocked}
                           onChange={() => handleAnswerChange(currentQuestion._id, opt._id)}
                         />
                         <span>{opt.text}</span>
@@ -614,6 +736,7 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
                           <input
                             type="checkbox"
                             checked={isChecked || false}
+                            disabled={currentQuestionLocked}
                             onChange={(e) => {
                               const prev = (answers[currentQuestion._id] as string[]) || [];
                               handleAnswerChange(
@@ -634,6 +757,7 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
                       type="number"
                       className="exam-integer-input"
                       value={(answers[currentQuestion._id] as string) || ""}
+                      disabled={currentQuestionLocked}
                       onChange={(e) => handleAnswerChange(currentQuestion._id, e.target.value)}
                       placeholder="Enter your numeric answer…"
                     />
@@ -645,16 +769,16 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
                 <button
                   type="button"
                   className="exam-nav-btn"
-                  onClick={() => goToQuestion(Math.max(0, currentQIndex - 1))}
-                  disabled={currentQIndex === 0}
+                  onClick={() => prevNavIndex !== null && goToQuestion(prevNavIndex)}
+                  disabled={prevNavIndex === null}
                 >
                   ← Previous
                 </button>
                 <button
                   type="button"
                   className="exam-nav-btn"
-                  onClick={() => goToQuestion(Math.min(questions.length - 1, currentQIndex + 1))}
-                  disabled={currentQIndex === questions.length - 1}
+                  onClick={() => nextNavIndex !== null && goToQuestion(nextNavIndex)}
+                  disabled={nextNavIndex === null}
                 >
                   Next →
                 </button>
@@ -673,6 +797,10 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
                     <span className="exam-palette-dot exam-palette-dot--unanswered" aria-hidden />
                     Unanswered
                   </span>
+                  <span>
+                    <span className="exam-palette-dot exam-palette-dot--expired" aria-hidden />
+                    Time expired
+                  </span>
                 </div>
               </div>
               <div className="exam-palette-grid">
@@ -680,12 +808,15 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
                   const ans = answers[q._id];
                   const isAnswered =
                     ans !== undefined && ans !== "" && (!Array.isArray(ans) || ans.length > 0);
+                  const isExpired = isQuestionTimeExpired(q.timeLimitSeconds, questionTimings, q._id);
                   return (
                     <button
                       key={q._id}
                       type="button"
-                      onClick={() => goToQuestion(idx)}
-                      className={`exam-palette-btn${isAnswered ? " exam-palette-btn--answered" : ""}${currentQIndex === idx ? " exam-palette-btn--current" : ""}`}
+                      onClick={() => !isExpired && goToQuestion(idx)}
+                      disabled={isExpired}
+                      title={isExpired ? "Time for this question has expired" : undefined}
+                      className={`exam-palette-btn${isAnswered ? " exam-palette-btn--answered" : ""}${currentQIndex === idx ? " exam-palette-btn--current" : ""}${isExpired ? " exam-palette-btn--expired" : ""}`}
                     >
                       {idx + 1}
                     </button>
@@ -695,6 +826,58 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
             </aside>
           </div>
         </>
+      ) : null}
+
+      {submitResultModal ? (
+        <div className="exam-result-backdrop" role="dialog" aria-modal="true" aria-labelledby="exam-result-title">
+          <div className="exam-result-modal">
+            <h2 id="exam-result-title" className="exam-result-title">
+              {submitResultModal.autoSubmitted ? "Time's up — test submitted" : "Test submitted successfully"}
+            </h2>
+            {submitResultModal.autoSubmitted ? (
+              <p className="exam-result-note">
+                Your exam time ended and your answers were submitted automatically.
+              </p>
+            ) : null}
+            <div className="exam-result-stats">
+              <div className="exam-result-stat exam-result-stat--score">
+                <span>Total score</span>
+                <strong>{submitResultModal.totalScore}</strong>
+              </div>
+              <div className="exam-result-stat">
+                <span>Correct</span>
+                <strong>{submitResultModal.correctQuestions}</strong>
+              </div>
+              <div className="exam-result-stat">
+                <span>Incorrect</span>
+                <strong>{submitResultModal.incorrectQuestions}</strong>
+              </div>
+              <div className="exam-result-stat">
+                <span>Unattempted</span>
+                <strong>{submitResultModal.unattemptedQuestions}</strong>
+              </div>
+              <div className="exam-result-stat">
+                <span>Accuracy</span>
+                <strong>{submitResultModal.accuracyPercentage}%</strong>
+              </div>
+            </div>
+            <button type="button" className="exam-start-btn exam-result-btn" onClick={closeSubmitResultModal}>
+              Back to student portal
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {submitError ? (
+        <div className="exam-result-backdrop" role="alertdialog" aria-modal="true" aria-labelledby="exam-error-title">
+          <div className="exam-result-modal exam-result-modal--error">
+            <h2 id="exam-error-title" className="exam-result-title">Submission failed</h2>
+            <p className="exam-result-error-text">{submitError}</p>
+            <button type="button" className="exam-start-btn exam-result-btn" onClick={() => setSubmitError(null)}>
+              Close
+            </button>
+          </div>
+        </div>
       ) : null}
     </div>
   );
