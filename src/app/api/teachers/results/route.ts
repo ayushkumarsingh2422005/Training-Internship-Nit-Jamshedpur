@@ -4,6 +4,7 @@ import Test from "@/models/Test";
 import TestResult from "@/models/TestResult";
 import Application from "@/models/Application";
 import Teacher from "@/models/Teacher";
+import StudentTestAccess from "@/models/StudentTestAccess";
 import { verifyTeacherSessionToken } from "@/lib/teacher-session";
 
 async function getTeacherFromRequest(req: Request) {
@@ -33,12 +34,17 @@ export async function GET(req: Request) {
       .populate({
         path: "studentId",
         model: Application,
-        select: "fullName email internId subject subpart",
+        select: "fullName email internId subject subpart branch",
       })
       .populate({
         path: "testId",
         model: Test,
         select: "testName",
+      })
+      .populate({
+        path: "accessId",
+        model: StudentTestAccess,
+        select: "tabSwitches focusLosses startedAt submittedAt",
       })
       .sort({ createdAt: -1 })
       .lean();

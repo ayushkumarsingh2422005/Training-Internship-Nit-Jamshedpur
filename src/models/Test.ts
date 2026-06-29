@@ -11,6 +11,7 @@ const testSchema = new Schema(
     instructions: { type: String },
     totalMarks: { type: Number, required: true, default: 0 },
     isNegativeMarking: { type: Boolean, default: false },
+    randomizeQuestions: { type: Boolean, default: true },
     status: {
       type: String,
       enum: ["Draft", "Published", "Archived"],

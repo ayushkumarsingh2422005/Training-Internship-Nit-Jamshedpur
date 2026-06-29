@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { authHeaders } from "@/lib/student-session-client";
+import type { StudentTestListItem } from "@/lib/student-test-status";
 
 export function StudentExamsPanel() {
-  const [tests, setTests] = useState<any[]>([]);
+  const [tests, setTests] = useState<StudentTestListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<"ongoing" | "upcoming" | "completed">("ongoing");
   const [isMobile, setIsMobile] = useState(false);
+  const initialTabSet = useRef(false);
 
   const fetchTests = useCallback(async () => {
     setLoading(true);
@@ -27,7 +29,6 @@ export function StudentExamsPanel() {
   useEffect(() => {
     fetchTests();
 
-    // Check size on load and resize
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
     };
@@ -35,6 +36,20 @@ export function StudentExamsPanel() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [fetchTests]);
+
+  useEffect(() => {
+    if (loading || initialTabSet.current || tests.length === 0) return;
+
+    const ongoing = tests.filter((t) => t.scheduleCategory === "ongoing");
+    const upcoming = tests.filter((t) => t.scheduleCategory === "upcoming");
+    const completed = tests.filter((t) => t.scheduleCategory === "completed");
+
+    if (ongoing.length > 0) setActiveCategory("ongoing");
+    else if (upcoming.length > 0) setActiveCategory("upcoming");
+    else setActiveCategory("completed");
+
+    initialTabSet.current = true;
+  }, [loading, tests]);
 
   async function startTest(testId: string) {
     try {
@@ -46,8 +61,7 @@ export function StudentExamsPanel() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start test");
 
-      // Redirect to the secure test URL
-      window.location.href = `/exam/${data.studentHash}/${data.secureToken}`;
+      window.location.href = `/exam/${data.studentHash}/${data.secureToken}?autostart=1`;
     } catch (err: any) {
       alert(err.message);
     }
@@ -379,26 +393,42 @@ export function StudentExamsPanel() {
   if (loading) return <p>Loading exams...</p>;
   if (error) return <p className="error">{error}</p>;
 
-  const now = new Date();
-  const ongoing = tests.filter(test => {
+  const ongoing = tests.filter((test) => test.scheduleCategory === "ongoing");
+  const upcoming = tests.filter((test) => test.scheduleCategory === "upcoming");
+  const completed = tests.filter((test) => test.scheduleCategory === "completed");
+
+  function attemptBadgeStyle(label: string) {
+    switch (label) {
+      case "Submitted":
+        return { background: "#d1fae5", color: "#065f46" };
+      case "In progress":
+        return { background: "#fef3c7", color: "#92400e" };
+      case "Not attempted":
+      case "Terminated":
+        return { background: "#fee2e2", color: "#991b1b" };
+      case "Scheduled":
+        return { background: "#dbeafe", color: "#1e40af" };
+      default:
+        return { background: "#f1f5f9", color: "#475569" };
+    }
+  }
+
+  function renderTestCard(test: StudentTestListItem) {
     const start = new Date(test.startDateTime);
     const end = new Date(test.endDateTime);
-    return now >= start && now <= end;
-  });
-
-  const upcoming = tests.filter(test => {
-    const start = new Date(test.startDateTime);
-    return now < start;
-  });
-
-  const completed = tests.filter(test => {
-    const end = new Date(test.endDateTime);
-    return now > end;
-  });
-
-  function renderTestCard(test: any, status: "Live" | "Upcoming" | "Closed") {
-    const start = new Date(test.startDateTime);
-    const end = new Date(test.endDateTime);
+    const scheduleLabel =
+      test.scheduleCategory === "ongoing"
+        ? "Ongoing"
+        : test.scheduleCategory === "upcoming"
+          ? "Upcoming"
+          : "Completed";
+    const scheduleStyle =
+      test.scheduleCategory === "ongoing"
+        ? { background: "#d1fae5", color: "#065f46" }
+        : test.scheduleCategory === "upcoming"
+          ? { background: "#dbeafe", color: "#1e40af" }
+          : { background: "#f1f5f9", color: "#475569" };
+    const attemptStyle = attemptBadgeStyle(test.attemptLabel);
 
     return (
       <div key={test._id} style={{ border: "1px solid #e2e8f0", padding: "1.25rem", borderRadius: "10px", background: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
@@ -409,37 +439,56 @@ export function StudentExamsPanel() {
         <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.9rem", color: "#475569" }}>
           <strong>Duration:</strong> {test.durationMinutes} mins | <strong>Marks:</strong> {test.totalMarks}
         </p>
-        <p style={{ margin: "0 0 0.75rem 0", fontSize: "0.9rem", color: "#475569" }}>
-          <strong>Status:</strong>{" "}
-          <span 
-            className={`badge ${status.toLowerCase()}`}
-            style={{
-              padding: "0.2rem 0.5rem",
-              borderRadius: "4px",
-              fontSize: "0.8rem",
-              fontWeight: "bold",
-              background: status === "Live" ? "#d1fae5" : status === "Upcoming" ? "#dbeafe" : "#f1f5f9",
-              color: status === "Live" ? "#065f46" : status === "Upcoming" ? "#1e40af" : "#475569",
-            }}
-          >
-            {status === "Live" ? "Ongoing" : status === "Upcoming" ? "Upcoming" : "Completed"}
+        <p style={{ margin: "0 0 0.5rem 0", fontSize: "0.9rem", color: "#475569", display: "flex", flexWrap: "wrap", gap: "0.5rem", alignItems: "center" }}>
+          <strong>Status:</strong>
+          <span style={{ padding: "0.2rem 0.5rem", borderRadius: "4px", fontSize: "0.8rem", fontWeight: "bold", ...scheduleStyle }}>
+            {scheduleLabel}
+          </span>
+          <strong style={{ marginLeft: "0.25rem" }}>Your attempt:</strong>
+          <span style={{ padding: "0.2rem 0.5rem", borderRadius: "4px", fontSize: "0.8rem", fontWeight: "bold", ...attemptStyle }}>
+            {test.attemptLabel}
           </span>
         </p>
-        
-        {status === "Live" && (
+        {test.hasResult && test.totalScore != null && (
+          <p style={{ margin: "0 0 0.75rem 0", fontSize: "0.9rem", color: "#475569" }}>
+            <strong>Score:</strong> {test.totalScore} / {test.totalMarks}
+            {test.accuracyPercentage != null && ` (${test.accuracyPercentage}% accuracy)`}
+          </p>
+        )}
+        {!test.hasResult && <div style={{ marginBottom: "0.75rem" }} />}
+
+        {test.canStart && (
           <button className="btn btn-green btn-sm" onClick={() => startTest(test._id)}>
             Start Test
           </button>
         )}
 
-        {status === "Closed" && (
-          <button 
-            className="btn btn-sm btn-green" 
+        {test.canResume && (
+          <button className="btn btn-green btn-sm" onClick={() => startTest(test._id)}>
+            Resume Test
+          </button>
+        )}
+
+        {test.scheduleCategory === "ongoing" && test.attemptLabel === "Submitted" && (
+          <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748b", fontStyle: "italic" }}>
+            Report will be available after the exam window closes.
+          </p>
+        )}
+
+        {test.canDownloadReport && (
+          <button
+            className="btn btn-sm btn-green"
             onClick={() => downloadReportPDF(test._id)}
             style={{ background: "#3b82f6", display: "flex", alignItems: "center", gap: "0.25rem" }}
           >
             📄 Download PDF Report
           </button>
+        )}
+
+        {test.scheduleCategory === "completed" && !test.canDownloadReport && (
+          <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748b", fontStyle: "italic" }}>
+            No report available — this exam was not attempted.
+          </p>
         )}
       </div>
     );
@@ -548,7 +597,7 @@ export function StudentExamsPanel() {
                 <p style={{ color: "#64748b", fontStyle: "italic", fontSize: "0.95rem" }}>No exams are live right now.</p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                  {ongoing.map(test => renderTestCard(test, "Live"))}
+                  {ongoing.map((test) => renderTestCard(test))}
                 </div>
               )}
             </div>
@@ -563,7 +612,7 @@ export function StudentExamsPanel() {
                 <p style={{ color: "#64748b", fontStyle: "italic", fontSize: "0.95rem" }}>No upcoming exams scheduled.</p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                  {upcoming.map(test => renderTestCard(test, "Upcoming"))}
+                  {upcoming.map((test) => renderTestCard(test))}
                 </div>
               )}
             </div>
@@ -578,7 +627,7 @@ export function StudentExamsPanel() {
                 <p style={{ color: "#64748b", fontStyle: "italic", fontSize: "0.95rem" }}>No completed exams yet.</p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                  {completed.map(test => renderTestCard(test, "Closed"))}
+                  {completed.map((test) => renderTestCard(test))}
                 </div>
               )}
             </div>

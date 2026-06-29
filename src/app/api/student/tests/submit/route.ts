@@ -10,7 +10,7 @@ import TestResult from "@/models/TestResult";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { studentHash, secureToken, answers } = body;
+    const { studentHash, secureToken, answers: clientAnswers } = body;
 
     if (!studentHash || !secureToken) {
       return NextResponse.json({ error: "Missing authentication parameters." }, { status: 400 });
@@ -42,7 +42,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Submission blocked: The test time window has already closed." }, { status: 403 });
     }
 
-    // 3. Fetch all test questions
+    // Merge client answers with server-side draft (prefer client when both exist)
+    const serverDraft =
+      access.answersDraft && typeof access.answersDraft === "object"
+        ? (access.answersDraft as Record<string, unknown>)
+        : {};
+    const answers = { ...serverDraft, ...(clientAnswers || {}) };
     const testQuestions = await TestQuestion.find({ testId: test._id }).lean();
     const questionIds = testQuestions.map((tq) => tq.questionId);
     const questionsFromBank = await QuestionBank.find({ _id: { $in: questionIds } }).lean();
@@ -115,6 +120,9 @@ export async function POST(req: Request) {
           selectedOptionIds,
           integerAnswer,
           status: isAttempted ? "Answered" : "Not Answered",
+          timeSpentSeconds: (access.questionTimings ?? []).find(
+            (t: { questionId: string }) => t.questionId === qBank._id.toString(),
+          )?.elapsedSeconds ?? 0,
         },
         { upsert: true, new: true }
       );

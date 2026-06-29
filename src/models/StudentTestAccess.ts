@@ -15,6 +15,15 @@ const studentTestAccessSchema = new Schema(
     submittedAt: { type: Date, default: null },
     tabSwitches: { type: Number, default: 0 },
     focusLosses: { type: Number, default: 0 },
+    questionOrder: [{ type: String }],
+    currentQuestionIndex: { type: Number, default: 0 },
+    answersDraft: { type: Schema.Types.Mixed, default: {} },
+    questionTimings: [
+      {
+        questionId: { type: String, required: true },
+        elapsedSeconds: { type: Number, default: 0 },
+      },
+    ],
   },
   {
     timestamps: true,

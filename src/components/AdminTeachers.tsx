@@ -22,8 +22,13 @@ const DEFAULT_FORM: TeacherForm = {
   assignedModules: [],
 };
 
-export function AdminTeachers() {
+type AdminTeachersProps = {
+  refreshToken?: number;
+};
+
+export function AdminTeachers({ refreshToken = 0 }: AdminTeachersProps) {
   const [teachers, setTeachers] = useState<any[]>([]);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,7 +60,7 @@ export function AdminTeachers() {
 
   useEffect(() => {
     loadTeachers();
-  }, [loadTeachers]);
+  }, [loadTeachers, refreshToken]);
 
   useTopLoading(loading || saving);
 
@@ -191,7 +196,7 @@ export function AdminTeachers() {
     }
   }
 
-  function handleEdit(teacher: any) {
+  function handleEdit(teacher: { _id: string; fullName: string; email: string; phoneNumber: string; assignedModules?: AssignedModule[] }) {
     setForm({
       id: teacher._id,
       fullName: teacher.fullName,
@@ -202,197 +207,306 @@ export function AdminTeachers() {
     setShowModal(true);
   }
 
+  const totalModules = teachers.reduce((sum, t) => sum + (t.assignedModules?.length ?? 0), 0);
+  const searchLower = search.trim().toLowerCase();
+  const filteredTeachers = searchLower
+    ? teachers.filter(
+        (t) =>
+          t.fullName?.toLowerCase().includes(searchLower) ||
+          t.email?.toLowerCase().includes(searchLower) ||
+          t.phoneNumber?.includes(search.trim()),
+      )
+    : teachers;
+
   return (
-    <div className="admin-teachers">
-      <div className="admin-header-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-        <h2>Teachers Management</h2>
-        <div style={{ display: "flex", gap: "1rem" }}>
-          <button 
-            className="btn btn-secondary btn-sm" 
-            onClick={() => {
-              setBulkInput("");
-              setShowBulkModal(true);
-            }}
-          >
-            Bulk Add
-          </button>
-          <button 
-            className="btn btn-green btn-sm" 
-            onClick={() => {
-              setForm(DEFAULT_FORM);
-              setShowModal(true);
-            }}
-          >
-            Add Teacher
-          </button>
+    <>
+      <div className="admin-stats">
+        <div className="admin-stat-card">
+          <span className="admin-stat-value">{teachers.length}</span>
+          <span className="admin-stat-label">Registered teachers</span>
+        </div>
+        <div className="admin-stat-card">
+          <span className="admin-stat-value">{totalModules}</span>
+          <span className="admin-stat-label">Module assignments</span>
+        </div>
+        <div className="admin-stat-card">
+          <span className="admin-stat-value">{filteredTeachers.length}</span>
+          <span className="admin-stat-label">Matching records</span>
         </div>
       </div>
 
-      {error && <div className="alert alert-error" style={{ marginBottom: "1rem", color: "red" }}>{error}</div>}
+      <div className="admin-application-toolbar">
+        <button
+          type="button"
+          className="btn btn-green btn-sm"
+          onClick={() => {
+            setForm(DEFAULT_FORM);
+            setShowModal(true);
+          }}
+        >
+          Add teacher
+        </button>
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm"
+          onClick={() => {
+            setBulkInput("");
+            setShowBulkModal(true);
+          }}
+        >
+          Bulk add
+        </button>
+      </div>
 
-      <div className="admin-table-container">
+      {error ? (
+        <p className="admin-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      <form
+        className="admin-filters"
+        onSubmit={(e) => {
+          e.preventDefault();
+        }}
+      >
+        <div className="admin-filters-row">
+          <div className="form-field admin-field-full">
+            <label htmlFor="teacher-search">Search</label>
+            <input
+              id="teacher-search"
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Name, email, or phone"
+            />
+          </div>
+        </div>
+        <p className="admin-muted">
+          Teachers sign in at <code>/teacher-portal/login</code> (not linked on the public site).
+        </p>
+        <div className="admin-filters-actions">
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setSearch("")}>
+            Clear
+          </button>
+        </div>
+      </form>
+
+      <div className="admin-table-wrap">
         <table className="admin-table">
           <thead>
             <tr>
               <th>Name</th>
               <th>Email</th>
               <th>Phone</th>
-              <th>Assigned Modules</th>
+              <th>Assigned modules</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {teachers.map((t) => (
-              <tr key={t._id}>
-                <td>{t.fullName}</td>
-                <td>{t.email}</td>
-                <td>{t.phoneNumber}</td>
-                <td>
-                  {t.assignedModules.map((m: any, i: number) => (
-                    <span key={i} className="badge" style={{ background: "#eee", padding: "2px 6px", marginRight: "4px", borderRadius: "4px", fontSize: "12px" }}>
-                      {m.subject} - {m.subpart}
-                    </span>
-                  ))}
-                </td>
-                <td>
-                  <button className="btn btn-sm btn-secondary" onClick={() => handleEdit(t)}>Edit</button>
-                </td>
-              </tr>
-            ))}
-            {teachers.length === 0 && !loading && (
+            {loading ? (
               <tr>
-                <td colSpan={5} style={{ textAlign: "center" }}>
-                  No teachers found.
+                <td colSpan={5}>Loading teachers…</td>
+              </tr>
+            ) : filteredTeachers.length === 0 ? (
+              <tr>
+                <td colSpan={5}>
+                  {teachers.length === 0 ? "No teachers registered yet." : "No teachers match your search."}
                 </td>
               </tr>
+            ) : (
+              filteredTeachers.map((t) => (
+                <tr key={t._id}>
+                  <td><strong>{t.fullName}</strong></td>
+                  <td>{t.email}</td>
+                  <td>{t.phoneNumber}</td>
+                  <td>
+                    {(t.assignedModules?.length ?? 0) === 0 ? (
+                      <span className="admin-muted">—</span>
+                    ) : (
+                      t.assignedModules.map((m: AssignedModule, i: number) => (
+                        <span key={i} className="admin-module-tag">
+                          {m.subject} — {m.subpart}
+                        </span>
+                      ))
+                    )}
+                  </td>
+                  <td>
+                    <div className="admin-row-actions">
+                      <button type="button" className="btn btn-sm btn-secondary" onClick={() => handleEdit(t)}>
+                        Edit
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
       </div>
 
-      {showModal && (
-        <div className="admin-modal-backdrop" onClick={() => setShowModal(false)} style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ background: "white", padding: "2rem", borderRadius: "8px", width: "100%", maxWidth: "500px", maxHeight: "90vh", overflowY: "auto" }}>
-            <div className="admin-modal-header" style={{ display: "flex", justifyContent: "space-between", marginBottom: "1rem" }}>
-              <h2 className="admin-subhead">{form.id ? "Edit Teacher" : "Add Teacher"}</h2>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowModal(false)}>Close</button>
+      {showModal ? (
+        <div className="admin-modal-backdrop" onClick={() => !saving && setShowModal(false)}>
+          <div className="admin-modal admin-modal-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <h2 className="admin-subhead">{form.id ? "Edit teacher" : "Add teacher"}</h2>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setShowModal(false)}
+                disabled={saving}
+              >
+                Close
+              </button>
             </div>
-            
-            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <div className="form-field">
-                <label>Full Name</label>
-                <input 
-                  required 
-                  value={form.fullName} 
-                  onChange={(e) => setForm({ ...form, fullName: e.target.value })} 
-                  style={{ width: "100%", padding: "0.5rem" }}
-                />
-              </div>
-              <div className="form-field">
-                <label>Email</label>
-                <input 
-                  type="email" 
-                  required 
-                  value={form.email} 
-                  onChange={(e) => setForm({ ...form, email: e.target.value })} 
-                  style={{ width: "100%", padding: "0.5rem" }}
-                />
-              </div>
-              <div className="form-field">
-                <label>Phone Number</label>
-                <input 
-                  required 
-                  value={form.phoneNumber} 
-                  onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })} 
-                  style={{ width: "100%", padding: "0.5rem" }}
-                />
-              </div>
-
-              <div className="form-field" style={{ border: "1px solid #ddd", padding: "1rem", borderRadius: "4px" }}>
-                <label style={{ fontWeight: "bold", marginBottom: "0.5rem", display: "block" }}>Assigned Modules</label>
-                <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
-                  <select 
-                    value={tempSubject} 
-                    onChange={(e) => {
-                      setTempSubject(e.target.value);
-                      setTempSubpart("");
-                    }} 
-                    style={{ flex: 1, padding: "0.5rem" }}
-                  >
-                    <option value="">Select Branch (Subject)</option>
-                    {Object.keys(trainingCourses).map(branch => (
-                      <option key={branch} value={branch}>{branch}</option>
-                    ))}
-                  </select>
-                  <select 
-                    value={tempSubpart} 
-                    onChange={(e) => setTempSubpart(e.target.value)} 
-                    style={{ flex: 1, padding: "0.5rem" }}
-                    disabled={!tempSubject}
-                  >
-                    <option value="">Select Module (Subpart)</option>
-                    {tempSubject && (trainingCourses as any)[tempSubject]?.map((mod: string) => (
-                      <option key={mod} value={mod}>{mod}</option>
-                    ))}
-                  </select>
-                  <button type="button" className="btn btn-sm btn-secondary" onClick={handleAddModule}>Add</button>
+            <form className="admin-modal-body" onSubmit={handleSubmit}>
+              <div className="admin-form-grid-two">
+                <div className="form-field admin-field-full">
+                  <label htmlFor="teacher-full-name">Full name</label>
+                  <input
+                    id="teacher-full-name"
+                    required
+                    value={form.fullName}
+                    onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                    disabled={saving}
+                  />
                 </div>
-                
-                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                  {form.assignedModules.map((m, i) => (
-                    <li key={i} style={{ display: "flex", justifyContent: "space-between", background: "#f9f9f9", padding: "0.5rem", marginBottom: "0.25rem", borderRadius: "4px" }}>
-                      <span>{m.subject} - {m.subpart}</span>
-                      <button type="button" onClick={() => handleRemoveModule(i)} style={{ background: "none", border: "none", color: "red", cursor: "pointer" }}>&times;</button>
-                    </li>
-                  ))}
-                  {form.assignedModules.length === 0 && <span style={{ color: "#999", fontSize: "0.9rem" }}>No modules assigned yet.</span>}
-                </ul>
+                <div className="form-field">
+                  <label htmlFor="teacher-email">Email</label>
+                  <input
+                    id="teacher-email"
+                    type="email"
+                    required
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    disabled={saving}
+                  />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="teacher-phone">Phone number</label>
+                  <input
+                    id="teacher-phone"
+                    type="tel"
+                    required
+                    value={form.phoneNumber}
+                    onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
+                    disabled={saving}
+                  />
+                </div>
               </div>
 
-              <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
-                <button type="submit" className="btn btn-green" disabled={saving}>
-                  {saving ? "Saving..." : "Save Teacher"}
+              <div className="admin-filters admin-module-picker">
+                <h3 className="admin-subhead">Assigned modules</h3>
+                <div className="admin-filters-row">
+                  <div className="form-field">
+                    <label htmlFor="teacher-subject">Branch (subject)</label>
+                    <select
+                      id="teacher-subject"
+                      value={tempSubject}
+                      onChange={(e) => {
+                        setTempSubject(e.target.value);
+                        setTempSubpart("");
+                      }}
+                      disabled={saving}
+                    >
+                      <option value="">Select branch</option>
+                      {Object.keys(trainingCourses).map((branch) => (
+                        <option key={branch} value={branch}>
+                          {branch}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-field">
+                    <label htmlFor="teacher-subpart">Module (subpart)</label>
+                    <select
+                      id="teacher-subpart"
+                      value={tempSubpart}
+                      onChange={(e) => setTempSubpart(e.target.value)}
+                      disabled={!tempSubject || saving}
+                    >
+                      <option value="">Select module</option>
+                      {tempSubject &&
+                        (trainingCourses[tempSubject as keyof typeof trainingCourses] ?? []).map((mod) => (
+                          <option key={mod} value={mod}>
+                            {mod}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <div className="form-field admin-module-add-field">
+                    <label>&nbsp;</label>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={handleAddModule} disabled={saving}>
+                      Add module
+                    </button>
+                  </div>
+                </div>
+                {form.assignedModules.length === 0 ? (
+                  <p className="admin-muted">No modules assigned yet.</p>
+                ) : (
+                  <ul className="admin-module-list">
+                    {form.assignedModules.map((m, i) => (
+                      <li key={`${m.subject}-${m.subpart}-${i}`}>
+                        <span>{m.subject} — {m.subpart}</span>
+                        <button type="button" className="admin-icon-btn admin-icon-btn-danger" onClick={() => handleRemoveModule(i)} disabled={saving}>
+                          ×
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="admin-filters-actions">
+                <button type="submit" className="btn btn-green btn-sm" disabled={saving}>
+                  {saving ? "Saving…" : form.id ? "Update teacher" : "Save teacher"}
                 </button>
               </div>
             </form>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {showBulkModal && (
-        <div className="admin-modal-backdrop" onClick={() => setShowBulkModal(false)} style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ background: "white", padding: "2rem", borderRadius: "8px", width: "100%", maxWidth: "600px", maxHeight: "90vh", overflowY: "auto" }}>
-            <div className="admin-modal-header" style={{ display: "flex", justifyContent: "space-between", marginBottom: "1rem" }}>
-              <h2 className="admin-subhead">Bulk Add Teachers</h2>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowBulkModal(false)}>Close</button>
+      {showBulkModal ? (
+        <div className="admin-modal-backdrop" onClick={() => !bulkSaving && setShowBulkModal(false)}>
+          <div className="admin-modal admin-modal-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <h2 className="admin-subhead">Bulk add teachers</h2>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setShowBulkModal(false)}
+                disabled={bulkSaving}
+              >
+                Close
+              </button>
             </div>
-            
-            <form onSubmit={handleBulkSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <p style={{ margin: 0, fontSize: "0.9rem", color: "#666" }}>
-                Paste CSV content with headers: <code>fullName, email, phoneNumber, modules</code>.<br/>
-                For modules, separate multiple with a semicolon <code>;</code> and format as <code>Subject:Subpart</code>.<br/>
-                Example: <code>Computer Science:Python Programming;Mechanical Engineering:AutoCAD</code>
+            <form className="admin-modal-body" onSubmit={handleBulkSubmit}>
+              <p className="admin-muted">
+                Paste CSV with headers: <code>fullName, email, phoneNumber, modules</code>.
+                Separate multiple modules with <code>;</code> as <code>Subject:Subpart</code>.
               </p>
               <div className="form-field">
-                <textarea 
-                  rows={10} 
-                  required 
-                  value={bulkInput} 
-                  onChange={(e) => setBulkInput(e.target.value)} 
-                  style={{ width: "100%", padding: "0.5rem", fontFamily: "monospace" }}
-                  placeholder="fullName, email, phoneNumber, modules&#10;John Doe, john@example.com, 1234567890, Computer Science and Engineering:Python Programming"
+                <label htmlFor="teacher-bulk-csv">CSV content</label>
+                <textarea
+                  id="teacher-bulk-csv"
+                  rows={10}
+                  required
+                  value={bulkInput}
+                  onChange={(e) => setBulkInput(e.target.value)}
+                  disabled={bulkSaving}
+                  placeholder={"fullName, email, phoneNumber, modules\nJohn Doe, john@example.com, 9876543210, Computer Science and Engineering:Python Programming"}
                 />
               </div>
-
-              <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
-                <button type="submit" className="btn btn-green" disabled={bulkSaving}>
-                  {bulkSaving ? "Adding..." : "Bulk Add Teachers"}
+              <div className="admin-filters-actions">
+                <button type="submit" className="btn btn-green btn-sm" disabled={bulkSaving}>
+                  {bulkSaving ? "Adding…" : "Bulk add teachers"}
                 </button>
               </div>
             </form>
           </div>
         </div>
-      )}
-    </div>
+      ) : null}
+    </>
   );
 }

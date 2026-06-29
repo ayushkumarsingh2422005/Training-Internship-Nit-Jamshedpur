@@ -190,6 +190,46 @@ function studentFormFromApplication(app: AdminApplication): StudentForm {
   };
 }
 
+type AdminSection =
+  | "applications"
+  | "notices"
+  | "feedback"
+  | "application-requests"
+  | "hostellers"
+  | "attendance"
+  | "teachers";
+
+const ADMIN_SECTION_HEADINGS: Record<AdminSection, { title: string; lead: string }> = {
+  applications: {
+    title: "Applications dashboard",
+    lead: "All shortlisted students — search, filter, and review records.",
+  },
+  notices: {
+    title: "Notices",
+    lead: "Publish and manage programme notices and PDF attachments.",
+  },
+  feedback: {
+    title: "Course feedback",
+    lead: "Review feedback submitted by students.",
+  },
+  "application-requests": {
+    title: "Application requests",
+    lead: "Review written requests from students.",
+  },
+  teachers: {
+    title: "Teachers dashboard",
+    lead: "Register instructors, assign modules, and manage examination access.",
+  },
+  hostellers: {
+    title: "Hostellers dashboard",
+    lead: "Search student by Intern ID and manage hosteller verification.",
+  },
+  attendance: {
+    title: "Attendance",
+    lead: "Mark and manage attendance by date, module, and session type.",
+  },
+};
+
 export function AdminDashboard() {
   const router = useRouter();
   const [adminRole, setAdminRole] = useState<"admin" | "hostel_admin" | null>(null);
@@ -239,9 +279,8 @@ export function AdminDashboard() {
   const [showStudentModal, setShowStudentModal] = useState(false);
   const [showBulkModal, setShowBulkModal] = useState(false);
   const [applicationMessage, setApplicationMessage] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<
-    "applications" | "notices" | "feedback" | "application-requests" | "hostellers" | "attendance" | "teachers"
-  >("applications");
+  const [activeSection, setActiveSection] = useState<AdminSection>("applications");
+  const [teacherRefreshToken, setTeacherRefreshToken] = useState(0);
   const [feedbackItems, setFeedbackItems] = useState<AdminCourseFeedback[]>([]);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
@@ -1134,6 +1173,11 @@ export function AdminDashboard() {
   const subjectOptions = Array.from(new Set([...(data?.filters.subjects ?? []), studentForm.subject].filter(Boolean)));
   const subpartOptions = Array.from(new Set([...(data?.filters.subparts ?? []), studentForm.subpart].filter(Boolean)));
 
+  const sectionHeading =
+    adminRole === "hostel_admin"
+      ? ADMIN_SECTION_HEADINGS.hostellers
+      : ADMIN_SECTION_HEADINGS[activeSection];
+
   if (sessionLoading || !adminRole) {
     return <p className="admin-loading">Loading dashboard…</p>;
   }
@@ -1142,12 +1186,8 @@ export function AdminDashboard() {
     <div className="admin-dashboard">
       <header className="admin-topbar">
         <div>
-          <h1>{adminRole === "admin" ? "Applications dashboard" : "Hostellers dashboard"}</h1>
-          <p>
-            {adminRole === "admin"
-              ? "All shortlisted students — search, filter, and review records."
-              : "Hostel admin access — search student by Intern ID and manage hosteller verification."}
-          </p>
+          <h1>{sectionHeading.title}</h1>
+          <p>{sectionHeading.lead}</p>
         </div>
         <div className="admin-topbar-actions">
           <a href="/" className="btn btn-secondary btn-sm">
@@ -1156,7 +1196,19 @@ export function AdminDashboard() {
           <button
             type="button"
             className="btn btn-outline-admin btn-sm"
-            onClick={() => void (adminRole === "admin" ? load() : loadHostellers())}
+            onClick={() => {
+              if (adminRole === "admin" && activeSection === "teachers") {
+                setTeacherRefreshToken((t) => t + 1);
+              } else if (adminRole === "admin" && activeSection === "feedback") {
+                void loadFeedback();
+              } else if (adminRole === "admin" && activeSection === "application-requests") {
+                void loadApplicationRequests();
+              } else if (adminRole === "admin") {
+                void load();
+              } else {
+                void loadHostellers();
+              }
+            }}
           >
             Refresh
           </button>
@@ -1224,7 +1276,9 @@ export function AdminDashboard() {
         ) : null}
       </div>
 
-      {adminRole === "admin" && activeSection === "teachers" ? <AdminTeachers /> : null}
+      {adminRole === "admin" && activeSection === "teachers" ? (
+        <AdminTeachers refreshToken={teacherRefreshToken} />
+      ) : null}
 
       {adminRole === "admin" && activeSection === "applications" && data ? (
         <div className="admin-stats">

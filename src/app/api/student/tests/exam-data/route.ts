@@ -4,6 +4,7 @@ import Test from "@/models/Test";
 import TestQuestion from "@/models/TestQuestion";
 import QuestionBank from "@/models/QuestionBank";
 import StudentTestAccess from "@/models/StudentTestAccess";
+import { shuffleArray } from "@/lib/exam-utils";
 
 export async function GET(req: Request) {
   try {
@@ -17,7 +18,6 @@ export async function GET(req: Request) {
 
     await connectDB();
 
-    // 1. Find Student Test Access
     const access = await StudentTestAccess.findOne({ studentHash, secureToken });
     if (!access) {
       return NextResponse.json({ error: "Unauthorized access." }, { status: 401 });
@@ -27,7 +27,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "This test has already been completed or terminated." }, { status: 403 });
     }
 
-    // 2. Fetch Test
     const test = await Test.findById(access.testId).lean();
     if (!test || test.status !== "Published") {
       return NextResponse.json({ error: "Test is not active or available." }, { status: 404 });
@@ -41,18 +40,13 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Test is outside the active time window." }, { status: 403 });
     }
 
-    // 3. Update startedAt and status if starting for the first time
     if (!access.startedAt) {
       access.startedAt = now;
       access.status = "In Progress";
-      await access.save();
     }
 
-    // Calculate time left (seconds)
     const testDurationMs = test.durationMinutes * 60 * 1000;
-    const individualEndTime = new Date(access.startedAt.getTime() + testDurationMs);
-    
-    // Test must end either when duration is over OR when the test window closes
+    const individualEndTime = new Date(access.startedAt!.getTime() + testDurationMs);
     const finalEndTime = end < individualEndTime ? end : individualEndTime;
     const timeLeftSeconds = Math.max(0, Math.floor((finalEndTime.getTime() - Date.now()) / 1000));
 
@@ -63,44 +57,73 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Test duration has expired." }, { status: 403 });
     }
 
-    // 4. Fetch questions linked to this test
     const testQuestions = await TestQuestion.find({ testId: test._id })
       .sort({ order: 1 })
       .lean();
 
-    const questionIds = testQuestions.map((tq) => tq.questionId);
-    const questionsFromBank = await QuestionBank.find({ _id: { $in: questionIds } }).lean();
+    const questionIds = testQuestions.map((tq) => tq.questionId.toString());
 
-    // Map questions with marks and sanitize options (remove isCorrect)
-    const sanitizedQuestions = testQuestions.map((tq) => {
-      const qBank = questionsFromBank.find((q) => q._id.toString() === tq.questionId.toString());
-      if (!qBank) return null;
+    if (!access.questionOrder || access.questionOrder.length === 0) {
+      const orderedIds = test.randomizeQuestions !== false
+        ? shuffleArray(questionIds)
+        : questionIds;
+      access.questionOrder = orderedIds;
+    }
 
-      // Strip correctness data to prevent inspection in browser
-      const sanitizedOptions = (qBank.options || []).map((opt: any) => ({
-        _id: opt._id,
-        text: opt.text,
-      }));
+    await access.save();
 
-      return {
-        _id: qBank._id,
-        questionType: qBank.questionType,
-        questionText: qBank.questionText,
-        options: sanitizedOptions,
-        marks: tq.marks,
-        negativeMarks: tq.negativeMarks,
-      };
-    }).filter(Boolean);
+    const orderMap = new Map(
+      testQuestions.map((tq) => [tq.questionId.toString(), tq]),
+    );
+
+    const questionsFromBank = await QuestionBank.find({
+      _id: { $in: testQuestions.map((tq) => tq.questionId) },
+    }).lean();
+
+    const sanitizedQuestions = (access.questionOrder as string[])
+      .map((qId) => {
+        const tq = orderMap.get(qId);
+        const qBank = questionsFromBank.find((q) => q._id.toString() === qId);
+        if (!tq || !qBank) return null;
+
+        const sanitizedOptions = (qBank.options || []).map((opt: { _id: unknown; text: string }) => ({
+          _id: opt._id,
+          text: opt.text,
+        }));
+
+        return {
+          _id: qBank._id,
+          questionType: qBank.questionType,
+          questionText: qBank.questionText,
+          options: sanitizedOptions,
+          marks: tq.marks,
+          negativeMarks: tq.negativeMarks,
+          timeLimitSeconds: tq.timeLimitSeconds ?? 0,
+        };
+      })
+      .filter(Boolean);
+
+    const answersDraft =
+      access.answersDraft && typeof access.answersDraft === "object"
+        ? access.answersDraft
+        : {};
 
     return NextResponse.json({
       test: {
+        _id: test._id,
         testName: test.testName,
         durationMinutes: test.durationMinutes,
         instructions: test.instructions || "",
         isNegativeMarking: test.isNegativeMarking,
+        randomizeQuestions: test.randomizeQuestions !== false,
       },
       questions: sanitizedQuestions,
       timeLeftSeconds,
+      currentQuestionIndex: access.currentQuestionIndex ?? 0,
+      answersDraft,
+      questionTimings: access.questionTimings ?? [],
+      tabSwitches: access.tabSwitches ?? 0,
+      focusLosses: access.focusLosses ?? 0,
     });
   } catch (error) {
     console.error("GET /api/student/tests/exam-data error:", error);
