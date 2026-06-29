@@ -9,6 +9,13 @@ function statusBadgeClass(status: string) {
   return status === "Published" ? "teacher-badge teacher-badge-published" : "teacher-badge teacher-badge-draft";
 }
 
+/** Format a Date for <input type="datetime-local"> using local time (not UTC). */
+function toDateTimeLocalValue(value: string | Date): string {
+  const d = new Date(value);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function TeacherDashboard() {
   const router = useRouter();
   const [sessionLoading, setSessionLoading] = useState(true);
@@ -268,8 +275,8 @@ export function TeacherDashboard() {
         testName: t.testName,
         moduleIndex: moduleIndex >= 0 ? moduleIndex : 0,
         durationMinutes: t.durationMinutes,
-        startDateTime: new Date(t.startDateTime).toISOString().slice(0, 16),
-        endDateTime: new Date(t.endDateTime).toISOString().slice(0, 16),
+        startDateTime: toDateTimeLocalValue(t.startDateTime),
+        endDateTime: toDateTimeLocalValue(t.endDateTime),
         instructions: t.instructions || "",
         isNegativeMarking: t.isNegativeMarking,
         randomizeQuestions: t.randomizeQuestions !== false,
