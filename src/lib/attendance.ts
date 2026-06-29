@@ -81,6 +81,84 @@ export function summarizeAttendanceCounts(records: { status: AttendanceStatus }[
   };
 }
 
+export type AttendanceBreakdown = {
+  present: number;
+  absent: number;
+  total: number;
+  percentage: number;
+};
+
+export function summarizeAttendanceEntries(entries: StudentAttendanceEntry[]): {
+  theory: AttendanceBreakdown;
+  lab: AttendanceBreakdown;
+  overall: AttendanceBreakdown;
+} {
+  const theoryEntries = entries.filter((entry) => entry.sessionType === "theory");
+  const labEntries = entries.filter((entry) => entry.sessionType === "lab");
+  const theoryPresent = theoryEntries.filter((entry) => entry.status === "present").length;
+  const labPresent = labEntries.filter((entry) => entry.status === "present").length;
+
+  const theory = {
+    present: theoryPresent,
+    absent: theoryEntries.length - theoryPresent,
+    total: theoryEntries.length,
+    percentage: attendancePercentage(theoryPresent, theoryEntries.length),
+  };
+
+  const lab = {
+    present: labPresent,
+    absent: labEntries.length - labPresent,
+    total: labEntries.length,
+    percentage: attendancePercentage(labPresent, labEntries.length),
+  };
+
+  const overallPresent = theoryPresent + labPresent;
+  const overallTotal = theoryEntries.length + labEntries.length;
+
+  return {
+    theory,
+    lab,
+    overall: {
+      present: overallPresent,
+      absent: overallTotal - overallPresent,
+      total: overallTotal,
+      percentage: attendancePercentage(overallPresent, overallTotal),
+    },
+  };
+}
+
+export type AttendanceSessionRecord = {
+  _id: { toString(): string };
+  date: string;
+  sessionType: string;
+  topic: string;
+  records: { applicationId: { toString(): string }; status: string }[];
+};
+
+export function extractStudentEntriesFromSessions(
+  applicationId: string,
+  sessions: AttendanceSessionRecord[],
+): StudentAttendanceEntry[] {
+  const entries: StudentAttendanceEntry[] = [];
+
+  for (const session of sessions) {
+    const record = session.records.find((item) => item.applicationId.toString() === applicationId);
+    if (!record) continue;
+
+    entries.push({
+      id: session._id.toString(),
+      date: session.date,
+      sessionType: session.sessionType as AttendanceSessionType,
+      topic: session.topic,
+      status: record.status as AttendanceStatus,
+    });
+  }
+
+  return entries.sort(
+    (a, b) => b.date.localeCompare(a.date) || a.sessionType.localeCompare(b.sessionType),
+  );
+}
+
 export function formatAttendanceSessionLabel(sessionType: AttendanceSessionType): string {
   return sessionType === "theory" ? "Theory" : "Lab";
 }

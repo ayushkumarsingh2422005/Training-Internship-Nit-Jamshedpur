@@ -2901,6 +2901,10 @@ img {
   width: min(760px, calc(100vw - 24px));
 }
 
+.admin-modal-wide {
+  width: min(1100px, calc(100vw - 24px));
+}
+
 .admin-modal-header {
   display: flex;
   align-items: center;
@@ -3427,6 +3431,64 @@ img {
   color: var(--green-dark);
   font-size: 0.9rem;
   font-weight: 600;
+}
+
+.admin-attendance-hub {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-attendance-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.admin-attendance-report-stats {
+  margin-top: 0.5rem;
+}
+
+.admin-attendance-report-student {
+  margin-bottom: 0.75rem;
+}
+
+.admin-attendance-report-student p {
+  margin: 0 0 0.35rem;
+}
+
+.admin-attendance-report-meta {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.admin-attendance-report-sessions {
+  margin-top: 1rem;
+}
+
+.admin-attendance-report-table td:nth-child(n + 5):nth-child(-n + 7) {
+  font-weight: 700;
+}
+
+.admin-attendance-pct-good {
+  color: var(--green-dark);
+}
+
+.admin-attendance-pct-warn {
+  color: #e65100;
+}
+
+.admin-attendance-pct-low {
+  color: #c62828;
+}
+
+.admin-attendance-pct-none {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.admin-stats--compact {
+  margin-bottom: 0.5rem;
 }
 
 /* Student attendance */

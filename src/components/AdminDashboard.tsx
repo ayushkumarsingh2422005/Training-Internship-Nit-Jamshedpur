@@ -4,7 +4,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AdminApplication } from "@/lib/admin-application";
 import type { NoticeCategory } from "@/lib/notices";
-import { AdminAttendance } from "@/components/AdminAttendance";
+import { AdminAttendanceHub } from "@/components/AdminAttendanceHub";
 import { useTopLoading } from "@/components/TopLoadingProvider";
 import { downloadIdCardsPdf, type IdCardProgress } from "@/lib/id-card-pdf";
 import { COLLEGE_DROPDOWN_OPTIONS, COLLEGE_OTHER } from "@/lib/government-colleges";
@@ -226,7 +226,7 @@ const ADMIN_SECTION_HEADINGS: Record<AdminSection, { title: string; lead: string
   },
   attendance: {
     title: "Attendance",
-    lead: "Mark and manage attendance by date, module, and session type.",
+    lead: "Mark daily attendance and review per-student attendance reports.",
   },
 };
 
@@ -2516,7 +2516,7 @@ export function AdminDashboard() {
         </section>
       ) : null}
 
-      {adminRole === "admin" && activeSection === "attendance" ? <AdminAttendance /> : null}
+      {adminRole === "admin" && activeSection === "attendance" ? <AdminAttendanceHub /> : null}
     </div>
   );
 }
