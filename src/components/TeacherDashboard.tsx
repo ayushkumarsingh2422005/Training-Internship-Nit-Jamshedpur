@@ -424,8 +424,10 @@ export function TeacherDashboard() {
           const cleanText = qText.replace(/^"|"$/g, "");
           const typeStr = (qType || "Single Correct").replace(/^"|"$/g, "");
           const cleanExplanation = (explanation || "").replace(/^"|"$/g, "");
-          const marksVal = Number(qMarks) || 4;
-          const negVal = Number(qNegMarks) || 1;
+          const marksParsed = Number(qMarks);
+          const negParsed = Number(qNegMarks);
+          const marksVal = qMarks !== "" && !Number.isNaN(marksParsed) ? marksParsed : 4;
+          const negVal = qNegMarks !== "" && !Number.isNaN(negParsed) ? negParsed : 1;
           const timeLimitVal = Number(qTimeLimit) || 0;
 
           let options: any[] = [];
@@ -799,7 +801,7 @@ export function TeacherDashboard() {
                       <td>{idx + 1}</td>
                       <td className="teacher-q-preview">{q.questionText}</td>
                       <td>{q.questionType}</td>
-                      <td>+{q.marks} / −{q.negativeMarks}</td>
+                      <td>{q.negativeMarks > 0 ? `+${q.marks} / −${q.negativeMarks}` : `+${q.marks} (no −ve)`}</td>
                       <td>{q.timeLimitSeconds > 0 ? `${q.timeLimitSeconds}s` : "—"}</td>
                       <td><button type="button" className="admin-icon-btn admin-icon-btn-danger" onClick={() => setFormQuestions(formQuestions.filter((_, i) => i !== idx))}>×</button></td>
                     </tr>
