@@ -72,6 +72,7 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
   const answersRef = useRef<Record<string, unknown>>({});
   const currentQIndexRef = useRef(0);
   const questionTimingsRef = useRef<QuestionTiming[]>([]);
+  const questionExpiryHandledRef = useRef<Set<string>>(new Set());
   const autostartHandledRef = useRef(false);
   const autoSubmitTriggeredRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
@@ -131,6 +132,7 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
       const prevElapsed = getQuestionElapsed(questionTimingsRef.current, qId);
       const total = Math.min(prevElapsed + sessionElapsed, limitSeconds);
       const updated = upsertQuestionTiming(questionTimingsRef.current, qId, total);
+      questionTimingsRef.current = updated;
       setQuestionTimings(updated);
       return updated;
     },
@@ -167,9 +169,10 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
 
       const nextQ = questions[nextIndex];
       if (nextQ && isQuestionTimeExpired(nextQ.timeLimitSeconds, timings, nextQ._id)) {
-        alert("Time for this question has expired. You cannot revisit it.");
         return;
       }
+
+      if (nextIndex === currentQIndexRef.current) return;
 
       setCurrentQIndex(nextIndex);
       setShowQuestionElapsed(false);
@@ -251,6 +254,7 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
         setTimeLeft(data.timeLeftSeconds);
         initialTimeLeftRef.current = data.timeLeftSeconds;
         setQuestionTimings(data.questionTimings ?? []);
+        questionTimingsRef.current = data.questionTimings ?? [];
         setProctorStats({
           tabSwitches: data.tabSwitches ?? 0,
           focusLosses: data.focusLosses ?? 0,
@@ -327,9 +331,24 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
       return;
     }
 
-    questionSessionStartRef.current = Date.now();
+    const storedElapsed = getQuestionElapsed(questionTimingsRef.current, currentQ._id);
+    const alreadyExpired =
+      questionExpiryHandledRef.current.has(currentQ._id) ||
+      storedElapsed >= currentQ.timeLimitSeconds;
+
+    if (!alreadyExpired) {
+      questionSessionStartRef.current = Date.now();
+    }
 
     const updateRemaining = () => {
+      if (
+        questionExpiryHandledRef.current.has(currentQ._id) ||
+        getQuestionElapsed(questionTimingsRef.current, currentQ._id) >= currentQ.timeLimitSeconds
+      ) {
+        setQuestionTimeLeft(0);
+        return;
+      }
+
       const remaining = getQuestionRemainingSeconds(
         currentQ.timeLimitSeconds,
         questionTimingsRef.current,
@@ -348,17 +367,20 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
     if (!isExamActive || questionTimeLeft !== 0) return;
     const currentQ = questions[currentQIndex];
     if (!currentQ || currentQ.timeLimitSeconds <= 0) return;
+    if (questionExpiryHandledRef.current.has(currentQ._id)) return;
+
+    questionExpiryHandledRef.current.add(currentQ._id);
 
     const timings = flushQuestionTime(currentQ._id, currentQ.timeLimitSeconds);
     const nextIndex = findNavigableIndex(currentQIndex, 1, timings);
 
-    if (nextIndex !== null) {
+    if (nextIndex !== null && nextIndex !== currentQIndex) {
       goToQuestion(nextIndex);
-    } else {
-      alert("Time limit reached for this question.");
-      syncToServer({ questionTimings: timings, answers: answersRef.current, event: "question_nav" });
-      setQuestionTimeLeft(null);
+      return;
     }
+
+    syncToServer({ questionTimings: timings, answers: answersRef.current, event: "question_nav" });
+    setQuestionTimeLeft(0);
   }, [
     questionTimeLeft,
     isExamActive,
@@ -544,12 +566,14 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
   const currentQuestionLocked =
     !!currentQuestion &&
     currentQuestion.timeLimitSeconds > 0 &&
-    isQuestionTimeExpired(
-      currentQuestion.timeLimitSeconds,
-      questionTimings,
-      currentQuestion._id,
-      questionSessionStartRef.current,
-    );
+    (questionTimeLeft === 0 ||
+      isQuestionTimeExpired(
+        currentQuestion.timeLimitSeconds,
+        questionTimings,
+        currentQuestion._id,
+      ));
+  const showEndOfExamNotice =
+    currentQuestionLocked && nextNavIndex === null && questionTimeLeft === 0;
 
   if (loading) {
     return (
@@ -681,7 +705,7 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
                     {currentQuestion?.timeLimitSeconds > 0 && questionTimeLeft !== null && (
                       <button
                         type="button"
-                        className={`exam-q-timer exam-timer--toggle${questionTimeLeft <= 10 ? " exam-q-timer--urgent" : ""}`}
+                        className={`exam-q-timer exam-timer--toggle${questionTimeLeft <= 10 && questionTimeLeft > 0 ? " exam-q-timer--urgent" : ""}`}
                         onClick={() => setShowQuestionElapsed((prev) => !prev)}
                         title={
                           showQuestionElapsed
@@ -703,6 +727,13 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
                 {currentQuestionLocked ? (
                   <p className="exam-question-expired-notice">
                     Time for this question has expired. You cannot change your answer.
+                  </p>
+                ) : null}
+
+                {showEndOfExamNotice ? (
+                  <p className="exam-end-notice">
+                    No more questions with time remaining. Review your answers and click{" "}
+                    <strong>Finish exam</strong> to submit.
                   </p>
                 ) : null}
 
