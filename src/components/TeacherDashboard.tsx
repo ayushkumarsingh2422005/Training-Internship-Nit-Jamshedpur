@@ -4,16 +4,10 @@ import { useState, useEffect, useCallback, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { saveTeacherSession, getTeacherSession, clearTeacherSession, authHeaders } from "@/lib/teacher-session-client";
 import { useTopLoading } from "@/components/TopLoadingProvider";
+import { dateTimeLocalToISO, toDateTimeLocalValue } from "@/lib/datetime-local";
 
 function statusBadgeClass(status: string) {
   return status === "Published" ? "teacher-badge teacher-badge-published" : "teacher-badge teacher-badge-draft";
-}
-
-/** Format a Date for <input type="datetime-local"> using local time (not UTC). */
-function toDateTimeLocalValue(value: string | Date): string {
-  const d = new Date(value);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 export function TeacherDashboard() {
@@ -515,8 +509,8 @@ export function TeacherDashboard() {
         testName: testForm.testName,
         subject: selectedModule.subject,
         subpart: selectedModule.subpart,
-        startDateTime: testForm.startDateTime,
-        endDateTime: testForm.endDateTime,
+        startDateTime: dateTimeLocalToISO(testForm.startDateTime),
+        endDateTime: dateTimeLocalToISO(testForm.endDateTime),
         durationMinutes: testForm.durationMinutes,
         instructions: testForm.instructions,
         totalMarks: calculatedTotalMarks,

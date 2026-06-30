@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { parseDateTimeInput } from "@/lib/datetime-local";
 import connectDB from "@/lib/mongodb";
 import Test from "@/models/Test";
 import QuestionBank from "@/models/QuestionBank";
@@ -162,8 +163,8 @@ export async function POST(req: Request) {
       testName,
       subject,
       subpart,
-      startDateTime: new Date(startDateTime),
-      endDateTime: new Date(endDateTime),
+      startDateTime: parseDateTimeInput(startDateTime),
+      endDateTime: parseDateTimeInput(endDateTime),
       durationMinutes: Number(durationMinutes),
       instructions: instructions || "",
       totalMarks: Number(totalMarks) || 0,
@@ -233,8 +234,8 @@ export async function PUT(req: Request) {
     existing.testName = testName;
     existing.subject = subject;
     existing.subpart = subpart;
-    existing.startDateTime = new Date(startDateTime);
-    existing.endDateTime = new Date(endDateTime);
+    existing.startDateTime = parseDateTimeInput(startDateTime);
+    existing.endDateTime = parseDateTimeInput(endDateTime);
     existing.durationMinutes = Number(durationMinutes);
     existing.instructions = instructions || "";
     existing.totalMarks = Number(totalMarks) || 0;
