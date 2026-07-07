@@ -5,7 +5,14 @@ import TestQuestion from "@/models/TestQuestion";
 import QuestionBank from "@/models/QuestionBank";
 import StudentTestAccess from "@/models/StudentTestAccess";
 import Application from "@/models/Application";
+import TestResult from "@/models/TestResult";
 import { shuffleArray } from "@/lib/exam-utils";
+import { getExamTimeState } from "@/lib/exam-access";
+import {
+  finalizeAccessIfExpired,
+  gradeAndSubmitAccess,
+  verifyExamAccessOwner,
+} from "@/lib/exam-grade-submit";
 
 export async function GET(req: Request) {
   try {
@@ -24,8 +31,9 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized access." }, { status: 401 });
     }
 
-    if (access.status === "Submitted" || access.status === "Terminated") {
-      return NextResponse.json({ error: "This test has already been completed or terminated." }, { status: 403 });
+    const owner = await verifyExamAccessOwner(req, access.studentId);
+    if (!owner.ok) {
+      return NextResponse.json({ error: owner.error }, { status: owner.status });
     }
 
     const test = await Test.findById(access.testId).lean();
@@ -34,28 +42,69 @@ export async function GET(req: Request) {
     }
 
     const now = new Date();
-    const start = new Date(test.startDateTime);
-    const end = new Date(test.endDateTime);
+    const timeState = getExamTimeState(test, access, now);
 
-    if (now < start || now > end) {
+    if (timeState.windowNotStarted || timeState.windowClosed) {
       return NextResponse.json({ error: "Test is outside the active time window." }, { status: 403 });
     }
 
-    if (!access.startedAt) {
-      access.startedAt = now;
-      access.status = "In Progress";
+    if (access.status === "In Progress" && !access.startedAt) {
+      access.status = "Not Started";
     }
 
-    const testDurationMs = test.durationMinutes * 60 * 1000;
-    const individualEndTime = new Date(access.startedAt!.getTime() + testDurationMs);
-    const finalEndTime = end < individualEndTime ? end : individualEndTime;
-    const timeLeftSeconds = Math.max(0, Math.floor((finalEndTime.getTime() - Date.now()) / 1000));
+    if (access.status === "Submitted" || access.status === "Terminated") {
+      const existingResult = await TestResult.findOne({ accessId: access._id }).lean();
+      const student = await Application.findById(access.studentId).lean();
+      if (existingResult) {
+        return NextResponse.json({
+          expired: true,
+          test: test
+            ? {
+                testName: test.testName,
+                subject: test.subject,
+                subpart: test.subpart,
+              }
+            : null,
+          student: student
+            ? { fullName: student.fullName, internId: student.internId ?? null }
+            : null,
+          result: {
+            totalScore: existingResult.totalScore,
+            correctQuestions: existingResult.correctQuestions,
+            incorrectQuestions: existingResult.incorrectQuestions,
+            unattemptedQuestions: existingResult.unattemptedQuestions,
+            accuracyPercentage: existingResult.accuracyPercentage,
+            autoSubmitted: true,
+          },
+        });
+      }
+      return NextResponse.json({ error: "This test has already been completed or terminated." }, { status: 403 });
+    }
 
-    if (timeLeftSeconds <= 0) {
-      access.status = "Submitted";
-      access.submittedAt = now;
-      await access.save();
-      return NextResponse.json({ error: "Test duration has expired." }, { status: 403 });
+    const attemptStarted = Boolean(access.startedAt);
+
+    if (attemptStarted && timeState.personalExpired) {
+      try {
+        const student = await Application.findById(access.studentId).lean();
+        const result = await finalizeAccessIfExpired(access, test);
+        const graded =
+          result ?? (await gradeAndSubmitAccess(access, { autoExpired: true }));
+        return NextResponse.json({
+          expired: true,
+          test: {
+            testName: test.testName,
+            subject: test.subject,
+            subpart: test.subpart,
+          },
+          student: student
+            ? { fullName: student.fullName, internId: student.internId ?? null }
+            : null,
+          result: graded,
+        });
+      } catch (err) {
+        console.error("Auto-submit on exam-data failed:", err);
+        return NextResponse.json({ error: "Test duration has expired." }, { status: 403 });
+      }
     }
 
     const testQuestions = await TestQuestion.find({ testId: test._id })
@@ -65,17 +114,14 @@ export async function GET(req: Request) {
     const questionIds = testQuestions.map((tq) => tq.questionId.toString());
 
     if (!access.questionOrder || access.questionOrder.length === 0) {
-      const orderedIds = test.randomizeQuestions !== false
-        ? shuffleArray(questionIds)
-        : questionIds;
+      const orderedIds =
+        test.randomizeQuestions !== false ? shuffleArray(questionIds) : questionIds;
       access.questionOrder = orderedIds;
     }
 
     await access.save();
 
-    const orderMap = new Map(
-      testQuestions.map((tq) => [tq.questionId.toString(), tq]),
-    );
+    const orderMap = new Map(testQuestions.map((tq) => [tq.questionId.toString(), tq]));
 
     const questionsFromBank = await QuestionBank.find({
       _id: { $in: testQuestions.map((tq) => tq.questionId) },
@@ -139,9 +185,11 @@ export async function GET(req: Request) {
         rollNumber: student.collegeRegistrationNumber ?? null,
       },
       questions: sanitizedQuestions,
-      timeLeftSeconds,
+      timeLeftSeconds: timeState.timeLeftSeconds,
+      attemptStarted,
       currentQuestionIndex: access.currentQuestionIndex ?? 0,
       answersDraft,
+      answersDraftUpdatedAt: access.updatedAt?.toISOString?.() ?? null,
       questionTimings: access.questionTimings ?? [],
       tabSwitches: access.tabSwitches ?? 0,
       focusLosses: access.focusLosses ?? 0,

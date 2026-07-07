@@ -1,4 +1,4 @@
-import { shuffleArray } from "@/lib/exam-utils";
+import { seededShuffleArray } from "@/lib/exam-utils";
 import type { GradingQuestion } from "@/lib/exam-preview-score";
 
 export const TEACHER_EXAM_PREVIEW_STORAGE_KEY = "teacher_exam_preview";
@@ -68,10 +68,11 @@ export function loadDraftPreview(): TeacherExamPreviewPayload | null {
 export function normalizeDraftPreviewQuestions(
   formQuestions: FormQuestionInput[],
   randomize: boolean,
+  seed = "preview-draft",
 ): { displayQuestions: PreviewExamQuestion[]; gradingQuestions: GradingQuestion[] } {
   let items = formQuestions.map((q, idx) => ({ q, idx }));
   if (randomize) {
-    items = shuffleArray(items);
+    items = seededShuffleArray(items, seed);
   }
 
   const displayQuestions: PreviewExamQuestion[] = [];

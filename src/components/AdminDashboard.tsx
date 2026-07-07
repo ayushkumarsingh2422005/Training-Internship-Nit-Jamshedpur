@@ -9,6 +9,7 @@ import { useTopLoading } from "@/components/TopLoadingProvider";
 import { downloadIdCardsPdf, type IdCardProgress } from "@/lib/id-card-pdf";
 import { COLLEGE_DROPDOWN_OPTIONS, COLLEGE_OTHER } from "@/lib/government-colleges";
 import { AdminTeachers } from "@/components/AdminTeachers";
+import { AdminExams } from "@/components/AdminExams";
 
 type AppliedFilters = {
   q: string;
@@ -197,7 +198,8 @@ type AdminSection =
   | "application-requests"
   | "hostellers"
   | "attendance"
-  | "teachers";
+  | "teachers"
+  | "exams";
 
 const ADMIN_SECTION_HEADINGS: Record<AdminSection, { title: string; lead: string }> = {
   applications: {
@@ -219,6 +221,10 @@ const ADMIN_SECTION_HEADINGS: Record<AdminSection, { title: string; lead: string
   teachers: {
     title: "Teachers dashboard",
     lead: "Register instructors, assign modules, and manage examination access.",
+  },
+  exams: {
+    title: "Examination oversight",
+    lead: "Monitor all tests, live attempts, submissions, and proctoring totals.",
   },
   hostellers: {
     title: "Hostellers dashboard",
@@ -1256,6 +1262,13 @@ export function AdminDashboard() {
             >
               Teachers
             </button>
+            <button
+              type="button"
+              className={`btn btn-sm ${activeSection === "exams" ? "btn-green" : "btn-secondary"}`}
+              onClick={() => setActiveSection("exams")}
+            >
+              Exams
+            </button>
           </>
         ) : null}
         <button
@@ -1279,6 +1292,8 @@ export function AdminDashboard() {
       {adminRole === "admin" && activeSection === "teachers" ? (
         <AdminTeachers refreshToken={teacherRefreshToken} />
       ) : null}
+
+      {adminRole === "admin" && activeSection === "exams" ? <AdminExams /> : null}
 
       {adminRole === "admin" && activeSection === "applications" && data ? (
         <div className="admin-stats">

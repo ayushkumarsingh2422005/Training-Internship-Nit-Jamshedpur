@@ -16,6 +16,7 @@ type ExamEntryScreenProps = {
   onGuidelinesAcceptedChange: (accepted: boolean) => void;
   onStart: () => void;
   startButtonRef?: RefObject<HTMLButtonElement | null>;
+  fullscreenError?: string | null;
 };
 
 function displayValue(value: string | null | undefined) {
@@ -31,6 +32,7 @@ export function ExamEntryScreen({
   onGuidelinesAcceptedChange,
   onStart,
   startButtonRef,
+  fullscreenError,
 }: ExamEntryScreenProps) {
   const instructionsText = formatExamInstructions(testData.instructions);
 
@@ -139,6 +141,12 @@ export function ExamEntryScreen({
       </main>
 
       <footer className="exam-cbt-footer">
+        {fullscreenError ? (
+          <p className="exam-cbt-fullscreen-error" role="alert">
+            {fullscreenError}
+          </p>
+        ) : null}
+        <div className="exam-cbt-footer-row">
         <label className="exam-cbt-consent">
           <input
             type="checkbox"
@@ -159,6 +167,7 @@ export function ExamEntryScreen({
         >
           Begin examination — enter full screen
         </button>
+        </div>
       </footer>
     </div>
   );

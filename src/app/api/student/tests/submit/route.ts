@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Test from "@/models/Test";
-import TestQuestion from "@/models/TestQuestion";
-import QuestionBank from "@/models/QuestionBank";
 import StudentTestAccess from "@/models/StudentTestAccess";
-import StudentAnswer from "@/models/StudentAnswer";
-import TestResult from "@/models/TestResult";
+import { getExamTimeState } from "@/lib/exam-access";
+import {
+  finalizeAccessIfExpired,
+  gradeAndSubmitAccess,
+  gradeAndSubmitOnWindowClose,
+  getExistingResultPayload,
+  verifyExamAccessOwner,
+} from "@/lib/exam-grade-submit";
 
 export async function POST(req: Request) {
   try {
@@ -18,161 +22,75 @@ export async function POST(req: Request) {
 
     await connectDB();
 
-    // 1. Find Student Test Access
     const access = await StudentTestAccess.findOne({ studentHash, secureToken });
     if (!access) {
       return NextResponse.json({ error: "Unauthorized access." }, { status: 401 });
     }
 
-    if (access.status === "Submitted" || access.status === "Terminated") {
-      return NextResponse.json({ error: "Test has already been submitted." }, { status: 400 });
+    const owner = await verifyExamAccessOwner(req, access.studentId);
+    if (!owner.ok) {
+      return NextResponse.json({ error: owner.error }, { status: owner.status });
     }
 
-    // 2. Fetch Test
+    if (access.status === "Submitted" || access.status === "Terminated") {
+      const existingResult = await getExistingResultPayload(access._id);
+      if (existingResult) {
+        return NextResponse.json({ success: true, result: existingResult, alreadySubmitted: true });
+      }
+      return NextResponse.json(
+        {
+          error:
+            access.status === "Terminated"
+              ? "This attempt was terminated."
+              : "Test has already been submitted.",
+          forceExit: true,
+        },
+        { status: 403 },
+      );
+    }
+
+    if (!access.startedAt) {
+      return NextResponse.json({ error: "Exam has not been started yet." }, { status: 400 });
+    }
+
     const test = await Test.findById(access.testId).lean();
     if (!test) {
       return NextResponse.json({ error: "Test not found." }, { status: 404 });
     }
 
     const now = new Date();
-    const end = new Date(test.endDateTime);
-    if (now > end) {
-      access.status = "Terminated";
-      await access.save();
-      return NextResponse.json({ error: "Submission blocked: The test time window has already closed." }, { status: 403 });
-    }
+    const timeState = getExamTimeState(test, access, now);
 
-    // Merge client answers with server-side draft (prefer client when both exist)
-    const serverDraft =
-      access.answersDraft && typeof access.answersDraft === "object"
-        ? (access.answersDraft as Record<string, unknown>)
-        : {};
-    const answers = { ...serverDraft, ...(clientAnswers || {}) };
-    const testQuestions = await TestQuestion.find({ testId: test._id }).lean();
-    const questionIds = testQuestions.map((tq) => tq.questionId);
-    const questionsFromBank = await QuestionBank.find({ _id: { $in: questionIds } }).lean();
-
-    let totalScore = 0;
-    let correctQuestions = 0;
-    let incorrectQuestions = 0;
-    let unattemptedQuestions = 0;
-
-    const submissionTime = new Date();
-    const totalTimeSpentSeconds = access.startedAt
-      ? Math.floor((submissionTime.getTime() - new Date(access.startedAt).getTime()) / 1000)
-      : 0;
-
-    // Loop through questions and grade them
-    for (const tq of testQuestions) {
-      const qBank = questionsFromBank.find((q) => q._id.toString() === tq.questionId.toString());
-      if (!qBank) continue;
-
-      const studentAns = answers ? answers[qBank._id.toString()] : undefined;
-      let isCorrect = false;
-      let isAttempted = false;
-
-      let selectedOptionIds: string[] = [];
-      let integerAnswer: number | null = null;
-
-      if (qBank.questionType === "Single Correct") {
-        if (studentAns !== undefined && studentAns !== "") {
-          isAttempted = true;
-          selectedOptionIds = [studentAns];
-          const correctOption = qBank.options.find((opt: any) => opt.isCorrect);
-          if (correctOption && correctOption._id.toString() === studentAns) {
-            isCorrect = true;
-          }
-        }
-      } else if (qBank.questionType === "Multiple Correct") {
-        if (Array.isArray(studentAns) && studentAns.length > 0) {
-          isAttempted = true;
-          selectedOptionIds = studentAns;
-
-          const correctOptionIds = qBank.options
-            .filter((opt: any) => opt.isCorrect)
-            .map((opt: any) => opt._id.toString());
-
-          // Match exactly: same size and every student selection is correct, and every correct option is selected
-          const matchesAll =
-            correctOptionIds.length === studentAns.length &&
-            studentAns.every((id: string) => correctOptionIds.includes(id));
-
-          if (matchesAll) {
-            isCorrect = true;
-          }
-        }
-      } else if (qBank.questionType === "Integer Type") {
-        if (studentAns !== undefined && studentAns !== null && studentAns !== "") {
-          isAttempted = true;
-          integerAnswer = Number(studentAns);
-          if (qBank.correctIntegerAnswer === integerAnswer) {
-            isCorrect = true;
-          }
-        }
-      }
-
-      // Save StudentAnswer
-      await StudentAnswer.findOneAndUpdate(
-        { accessId: access._id, questionId: qBank._id },
-        {
-          testId: test._id,
-          studentId: access.studentId,
-          selectedOptionIds,
-          integerAnswer,
-          status: isAttempted ? "Answered" : "Not Answered",
-          timeSpentSeconds: (access.questionTimings ?? []).find(
-            (t: { questionId: string }) => t.questionId === qBank._id.toString(),
-          )?.elapsedSeconds ?? 0,
-        },
-        { upsert: true, new: true }
-      );
-
-      // Score calculation
-      if (!isAttempted) {
-        unattemptedQuestions++;
-      } else if (isCorrect) {
-        correctQuestions++;
-        totalScore += tq.marks;
-      } else {
-        incorrectQuestions++;
-        if (test.isNegativeMarking) {
-          totalScore -= tq.negativeMarks;
-        }
+    if (timeState.windowClosed) {
+      try {
+        const result = await gradeAndSubmitOnWindowClose(access, clientAnswers);
+        return NextResponse.json({ success: true, result, autoExpired: true });
+      } catch (err) {
+        console.error("Auto-grade on window close (submit) failed:", err);
+        return NextResponse.json(
+          { error: "Submission blocked: The test time window has already closed." },
+          { status: 403 },
+        );
       }
     }
 
-    const attemptedCount = correctQuestions + incorrectQuestions;
-    const accuracyPercentage = attemptedCount > 0 ? Math.round((correctQuestions / attemptedCount) * 100) : 0;
+    if (timeState.personalExpired) {
+      const result = await finalizeAccessIfExpired(access, test, clientAnswers);
+      if (result) {
+        return NextResponse.json({ success: true, result, autoExpired: true });
+      }
+    }
 
-    // 4. Save TestResult
-    await TestResult.findOneAndUpdate(
-      { accessId: access._id },
-      {
-        testId: test._id,
-        studentId: access.studentId,
-        totalScore,
-        correctQuestions,
-        incorrectQuestions,
-        unattemptedQuestions,
-        accuracyPercentage,
-        totalTimeSpentSeconds,
-      },
-      { upsert: true }
-    );
-
-    // 5. Update StudentTestAccess
-    access.status = "Submitted";
-    access.submittedAt = submissionTime;
-    await access.save();
+    const result = await gradeAndSubmitAccess(access, { clientAnswers });
 
     return NextResponse.json({
       success: true,
       result: {
-        totalScore,
-        correctQuestions,
-        incorrectQuestions,
-        unattemptedQuestions,
-        accuracyPercentage,
+        totalScore: result.totalScore,
+        correctQuestions: result.correctQuestions,
+        incorrectQuestions: result.incorrectQuestions,
+        unattemptedQuestions: result.unattemptedQuestions,
+        accuracyPercentage: result.accuracyPercentage,
       },
     });
   } catch (error) {

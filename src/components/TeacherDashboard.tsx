@@ -6,10 +6,44 @@ import { saveTeacherSession, getTeacherSession, clearTeacherSession, authHeaders
 import { useTopLoading } from "@/components/TopLoadingProvider";
 import { dateTimeLocalToISO, toDateTimeLocalValue } from "@/lib/datetime-local";
 import { saveDraftPreview } from "@/lib/teacher-exam-preview";
+import { isProctorFlagged } from "@/lib/exam-utils";
+import { IconActionButton, IconActionGroup } from "@/components/IconActionButton";
 
 function statusBadgeClass(status: string) {
   return status === "Published" ? "teacher-badge teacher-badge-published" : "teacher-badge teacher-badge-draft";
 }
+
+type ResultDetailQuestion = {
+  _id: string;
+  questionType: string;
+  questionText: string;
+  options: { _id: string; text: string; isCorrect?: boolean }[];
+  correctIntegerAnswer?: number | null;
+  explanation?: string;
+  marks: number;
+  negativeMarks: number;
+  studentSelection: {
+    selectedOptionIds: string[];
+    integerAnswer: number | null;
+    isAttempted: boolean;
+    isCorrect: boolean;
+  };
+};
+
+type ResultDetailPayload = {
+  test: { testName: string; subject: string; subpart: string; totalMarks: number; isNegativeMarking: boolean };
+  student: { fullName: string; internId: string | null; email: string; collegeName: string };
+  result: {
+    totalScore: number;
+    correctQuestions: number;
+    incorrectQuestions: number;
+    unattemptedQuestions: number;
+    accuracyPercentage: number;
+    totalTimeSpentSeconds: number;
+  };
+  proctoring: { tabSwitches: number; focusLosses: number; startedAt?: string; submittedAt?: string };
+  questions: ResultDetailQuestion[];
+};
 
 export function TeacherDashboard() {
   const router = useRouter();
@@ -21,6 +55,11 @@ export function TeacherDashboard() {
   const [tests, setTests] = useState<any[]>([]);
   const [results, setResults] = useState<any[]>([]);
   const [expandedTests, setExpandedTests] = useState<Record<string, boolean>>({});
+  const [resultDetail, setResultDetail] = useState<ResultDetailPayload | null>(null);
+  const [resultDetailLoading, setResultDetailLoading] = useState(false);
+  const [resultDetailError, setResultDetailError] = useState<string | null>(null);
+  const [liveAttempts, setLiveAttempts] = useState<Record<string, any[]>>({});
+  const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
 
   // Test creation states
   const [isCreatingTest, setIsCreatingTest] = useState(false);
@@ -79,6 +118,24 @@ export function TeacherDashboard() {
       setLoading(false);
     }
   }, [teacher]);
+
+  const loadResultDetail = useCallback(async (resultId: string) => {
+    setResultDetailLoading(true);
+    setResultDetailError(null);
+    setResultDetail(null);
+    try {
+      const res = await fetch(`/api/teachers/results/detail?resultId=${encodeURIComponent(resultId)}`, {
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load submission details.");
+      setResultDetail(data as ResultDetailPayload);
+    } catch (err) {
+      setResultDetailError(err instanceof Error ? err.message : "Failed to load submission details.");
+    } finally {
+      setResultDetailLoading(false);
+    }
+  }, []);
 
   // Handle auto-session login on mount
   useEffect(() => {
@@ -173,10 +230,77 @@ export function TeacherDashboard() {
   }
 
   function toggleExpandTest(testId: string) {
-    setExpandedTests((prev) => ({
-      ...prev,
-      [testId]: !prev[testId],
-    }));
+    setExpandedTests((prev) => {
+      const opening = !prev[testId];
+      if (opening) void loadLiveAttempts(testId);
+      return { ...prev, [testId]: opening };
+    });
+  }
+
+  const loadLiveAttempts = useCallback(async (testId: string) => {
+    try {
+      const res = await fetch(`/api/teachers/tests/live?testId=${encodeURIComponent(testId)}`, {
+        headers: authHeaders(),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setLiveAttempts((prev) => ({ ...prev, [testId]: data.attempts || [] }));
+      }
+    } catch (err) {
+      console.error("loadLiveAttempts error:", err);
+    }
+  }, []);
+
+  async function handleTerminateAttempt(accessId: string, testId: string) {
+    if (!confirm("Terminate this in-progress attempt? The student will not be able to continue.")) {
+      return;
+    }
+    try {
+      const res = await fetch("/api/teachers/tests/terminate", {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ accessId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to terminate attempt.");
+      await loadLiveAttempts(testId);
+      await fetchData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to terminate attempt.");
+    }
+  }
+
+  function openQuestionModal(editIndex: number | null = null) {
+    if (editIndex !== null) {
+      const q = formQuestions[editIndex];
+      if (!q) return;
+      setCurrentQForm({
+        questionText: q.questionText,
+        questionType: q.questionType,
+        options: q.questionType === "Integer Type"
+          ? []
+          : (q.options?.length ? q.options : [
+              { text: "", isCorrect: false },
+              { text: "", isCorrect: false },
+              { text: "", isCorrect: false },
+              { text: "", isCorrect: false },
+            ]),
+        correctIntegerAnswer: q.correctIntegerAnswer ?? "",
+        explanation: q.explanation ?? "",
+        marks: q.marks,
+        negativeMarks: q.negativeMarks,
+        timeLimitSeconds: q.timeLimitSeconds ?? 0,
+      });
+      setEditingQuestionIndex(editIndex);
+    } else {
+      setEditingQuestionIndex(null);
+    }
+    setShowQuestionModal(true);
+  }
+
+  function closeQuestionModal() {
+    setShowQuestionModal(false);
+    setEditingQuestionIndex(null);
   }
 
   function downloadCSV(testName: string, testResults: any[]) {
@@ -199,6 +323,7 @@ export function TeacherDashboard() {
       "Time Spent (Minutes)",
       "Tab Switches",
       "Focus Losses",
+      "Proctor Flagged",
     ];
 
     const rows = testResults.map((r) => [
@@ -215,6 +340,7 @@ export function TeacherDashboard() {
       Math.round(r.totalTimeSpentSeconds / 60),
       r.accessId?.tabSwitches ?? 0,
       r.accessId?.focusLosses ?? 0,
+      isProctorFlagged(r.accessId?.tabSwitches ?? 0, r.accessId?.focusLosses ?? 0) ? "Yes" : "No",
     ]);
 
     const csvContent = [
@@ -340,6 +466,12 @@ export function TeacherDashboard() {
     }
 
     const questionObj = {
+      ...(editingQuestionIndex !== null && formQuestions[editingQuestionIndex]?.testQuestionId
+        ? {
+            testQuestionId: formQuestions[editingQuestionIndex].testQuestionId,
+            questionId: formQuestions[editingQuestionIndex].questionId,
+          }
+        : {}),
       questionText: currentQForm.questionText,
       questionType: currentQForm.questionType,
       options: currentQForm.questionType === "Integer Type" ? [] : currentQForm.options,
@@ -350,8 +482,12 @@ export function TeacherDashboard() {
       timeLimitSeconds: currentQForm.timeLimitSeconds,
     };
 
-    setFormQuestions((prev) => [...prev, questionObj]);
-    setShowQuestionModal(false);
+    if (editingQuestionIndex !== null) {
+      setFormQuestions((prev) => prev.map((q, i) => (i === editingQuestionIndex ? { ...q, ...questionObj } : q)));
+    } else {
+      setFormQuestions((prev) => [...prev, questionObj]);
+    }
+    closeQuestionModal();
 
     // Reset current form
     setCurrentQForm({
@@ -690,9 +826,21 @@ export function TeacherDashboard() {
                 </thead>
                 <tbody>
                   {tests.map((t) => {
-                    const testResults = results.filter(
-                      (r) => r.testId?._id?.toString() === t._id?.toString() || r.testId?.toString() === t._id?.toString(),
-                    );
+                    const testResults = results
+                      .filter(
+                        (r) => r.testId?._id?.toString() === t._id?.toString() || r.testId?.toString() === t._id?.toString(),
+                      )
+                      .sort((a, b) => {
+                        const aTabs = a.accessId?.tabSwitches ?? 0;
+                        const aFocus = a.accessId?.focusLosses ?? 0;
+                        const bTabs = b.accessId?.tabSwitches ?? 0;
+                        const bFocus = b.accessId?.focusLosses ?? 0;
+                        const aFlag = isProctorFlagged(aTabs, aFocus);
+                        const bFlag = isProctorFlagged(bTabs, bFocus);
+                        if (aFlag !== bFlag) return aFlag ? -1 : 1;
+                        return bTabs + bFocus - (aTabs + aFocus);
+                      });
+                    const live = liveAttempts[t._id] || [];
                     const expanded = expandedTests[t._id];
                     return (
                       <Fragment key={t._id}>
@@ -710,45 +858,95 @@ export function TeacherDashboard() {
                           <td>{testResults.length}</td>
                           <td>
                             <div className="admin-row-actions">
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-outline-admin"
+                            <IconActionGroup>
+                              <IconActionButton
+                                icon="preview"
+                                label="Preview exam in student view"
+                                variant="primary"
                                 onClick={() => handlePreviewSavedTest(t._id)}
-                                title="Preview exam in student view"
-                              >
-                                Preview
-                              </button>
-                              <button type="button" className="btn btn-sm btn-secondary" onClick={() => toggleExpandTest(t._id)}>
-                                {expanded ? "Hide" : "Results"}
-                              </button>
-                              <button
-                                type="button"
-                                className={`btn btn-sm ${t.status === "Published" ? "btn-secondary" : "btn-green"}`}
+                              />
+                              <IconActionButton
+                                icon="results"
+                                label={expanded ? "Hide submissions and live attempts" : "Show submissions and live attempts"}
+                                variant="secondary"
+                                onClick={() => toggleExpandTest(t._id)}
+                              />
+                              <IconActionButton
+                                icon={t.status === "Published" ? "draft" : "publish"}
+                                label={t.status === "Published" ? "Hide test from students (move to draft)" : "Publish test — make visible to students"}
+                                variant={t.status === "Published" ? "secondary" : "success"}
                                 onClick={() => handleToggleStatus(t._id, t.status)}
                                 disabled={loading}
-                              >
-                                {t.status === "Published" ? "Draft" : "Publish"}
-                              </button>
-                              <button type="button" className="btn btn-sm btn-outline-admin" onClick={() => handleEditTest(t._id)} disabled={loading}>
-                                Edit
-                              </button>
-                              <button type="button" className="admin-icon-btn admin-icon-btn-danger" title="Delete" onClick={() => handleDeleteTest(t._id)} disabled={loading}>
-                                ×
-                              </button>
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-green"
+                              />
+                              <IconActionButton
+                                icon="edit"
+                                label="Edit test questions and schedule"
+                                variant="neutral"
+                                onClick={() => handleEditTest(t._id)}
+                                disabled={loading}
+                              />
+                              <IconActionButton
+                                icon="delete"
+                                label="Delete this test permanently"
+                                variant="danger"
+                                onClick={() => handleDeleteTest(t._id)}
+                                disabled={loading}
+                              />
+                              <IconActionButton
+                                icon="download"
+                                label="Download results as CSV"
+                                variant="primary"
                                 onClick={() => downloadCSV(t.testName, testResults)}
                                 disabled={testResults.length === 0}
-                              >
-                                CSV
-                              </button>
+                              />
+                            </IconActionGroup>
                             </div>
                           </td>
                         </tr>
                         {expanded ? (
                           <tr key={`${t._id}-detail`} className="admin-detail-row">
                             <td colSpan={8}>
+                              {live.length > 0 ? (
+                                <>
+                                  <h3 className="admin-subhead">Live attempts ({live.length})</h3>
+                                  <div className="admin-table-wrap" style={{ marginBottom: "1.25rem" }}>
+                                    <table className="admin-table">
+                                      <thead>
+                                        <tr>
+                                          <th>Student</th>
+                                          <th>Intern ID</th>
+                                          <th>Time left</th>
+                                          <th>Q#</th>
+                                          <th>Tabs</th>
+                                          <th>Focus</th>
+                                          <th>Action</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {live.map((attempt) => (
+                                          <tr key={attempt.accessId} className={attempt.proctorFlagged ? "teacher-proctor-flag" : ""}>
+                                            <td>{attempt.studentName}</td>
+                                            <td>{attempt.internId}</td>
+                                            <td>{Math.max(0, Math.floor(attempt.timeLeftSeconds / 60))}m</td>
+                                            <td>{(attempt.currentQuestionIndex ?? 0) + 1}</td>
+                                            <td>{attempt.tabSwitches}</td>
+                                            <td>{attempt.focusLosses}</td>
+                                            <td>
+                                              <IconActionButton
+                                                icon="terminate"
+                                                label="Terminate this in-progress attempt"
+                                                variant="danger"
+                                                size="sm"
+                                                onClick={() => void handleTerminateAttempt(attempt.accessId, t._id)}
+                                              />
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </>
+                              ) : null}
                               <h3 className="admin-subhead">Submissions ({testResults.length})</h3>
                               {testResults.length === 0 ? (
                                 <p className="admin-muted">No submissions yet.</p>
@@ -765,6 +963,8 @@ export function TeacherDashboard() {
                                         <th>Time</th>
                                         <th>Tabs</th>
                                         <th>Focus</th>
+                                        <th>Flag</th>
+                                        <th>Details</th>
                                       </tr>
                                     </thead>
                                     <tbody>
@@ -778,6 +978,16 @@ export function TeacherDashboard() {
                                           <td>{Math.round(r.totalTimeSpentSeconds / 60)}m</td>
                                           <td className={r.accessId?.tabSwitches > 0 ? "teacher-proctor-flag" : ""}>{r.accessId?.tabSwitches ?? 0}</td>
                                           <td className={r.accessId?.focusLosses > 0 ? "teacher-proctor-flag" : ""}>{r.accessId?.focusLosses ?? 0}</td>
+                                          <td>{isProctorFlagged(r.accessId?.tabSwitches ?? 0, r.accessId?.focusLosses ?? 0) ? "⚠ Yes" : "—"}</td>
+                                          <td>
+                                            <IconActionButton
+                                              icon="view"
+                                              label="View full answer breakdown for this student"
+                                              variant="primary"
+                                              size="sm"
+                                              onClick={() => void loadResultDetail(r._id)}
+                                            />
+                                          </td>
                                         </tr>
                                       ))}
                                     </tbody>
@@ -842,7 +1052,7 @@ export function TeacherDashboard() {
           <div className="admin-application-toolbar">
             <h3 className="admin-subhead">Questions ({formQuestions.length})</h3>
             <label className="btn btn-secondary btn-sm teacher-file-btn">Upload CSV<input type="file" accept=".csv" onChange={handleCSVUpload} hidden /></label>
-            <button type="button" className="btn btn-green btn-sm" onClick={() => setShowQuestionModal(true)}>+ Add question</button>
+            <button type="button" className="btn btn-green btn-sm" onClick={() => openQuestionModal()}>+ Add question</button>
           </div>
           <p className="admin-muted teacher-csv-hint">CSV: Question Text, Type, Options 1–4, Correct Answer, Explanation, Marks, Negative Marks, Time Limit (seconds).</p>
           {formQuestions.length === 0 ? (
@@ -859,7 +1069,24 @@ export function TeacherDashboard() {
                       <td>{q.questionType}</td>
                       <td>{q.negativeMarks > 0 ? `+${q.marks} / −${q.negativeMarks}` : `+${q.marks} (no −ve)`}</td>
                       <td>{q.timeLimitSeconds > 0 ? `${q.timeLimitSeconds}s` : "—"}</td>
-                      <td><button type="button" className="admin-icon-btn admin-icon-btn-danger" onClick={() => setFormQuestions(formQuestions.filter((_, i) => i !== idx))}>×</button></td>
+                      <td>
+                        <IconActionGroup>
+                          <IconActionButton
+                            icon="edit"
+                            label="Edit this question"
+                            variant="neutral"
+                            size="sm"
+                            onClick={() => openQuestionModal(idx)}
+                          />
+                          <IconActionButton
+                            icon="delete"
+                            label="Remove this question from the test"
+                            variant="danger"
+                            size="sm"
+                            onClick={() => setFormQuestions(formQuestions.filter((_, i) => i !== idx))}
+                          />
+                        </IconActionGroup>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -883,11 +1110,11 @@ export function TeacherDashboard() {
       )}
 
       {showQuestionModal && (
-        <div className="admin-modal-backdrop" onClick={() => setShowQuestionModal(false)}>
+        <div className="admin-modal-backdrop" onClick={closeQuestionModal}>
           <div className="admin-modal admin-modal-sm" onClick={(e) => e.stopPropagation()}>
             <div className="admin-modal-header">
-              <h2 className="admin-subhead">Add question</h2>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowQuestionModal(false)}>Close</button>
+              <h2 className="admin-subhead">{editingQuestionIndex !== null ? "Edit question" : "Add question"}</h2>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={closeQuestionModal}>Close</button>
             </div>
             <div className="admin-modal-body">
               <div className="form-field">
@@ -1021,13 +1248,117 @@ export function TeacherDashboard() {
               </div>
 
               <div className="admin-filters-actions">
-                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowQuestionModal(false)}>Cancel</button>
-                <button type="button" className="btn btn-green btn-sm" onClick={saveManualQuestion}>Add to test</button>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={closeQuestionModal}>Cancel</button>
+                <button type="button" className="btn btn-green btn-sm" onClick={saveManualQuestion}>
+                  {editingQuestionIndex !== null ? "Save changes" : "Add to test"}
+                </button>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {(resultDetailLoading || resultDetail || resultDetailError) ? (
+        <div
+          className="admin-modal-backdrop"
+          onClick={() => {
+            setResultDetail(null);
+            setResultDetailError(null);
+          }}
+        >
+          <div className="admin-modal admin-modal-wide" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <h2>Submission details</h2>
+              <button
+                type="button"
+                className="admin-icon-btn"
+                aria-label="Close"
+                onClick={() => {
+                  setResultDetail(null);
+                  setResultDetailError(null);
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <div className="admin-modal-body">
+              {resultDetailLoading ? <p className="admin-loading">Loading answers…</p> : null}
+              {resultDetailError ? <p className="admin-error">{resultDetailError}</p> : null}
+              {resultDetail ? (
+                <>
+                  <div className="teacher-result-detail-meta">
+                    <p><strong>{resultDetail.student.fullName}</strong> ({resultDetail.student.internId || "—"})</p>
+                    <p className="admin-muted">{resultDetail.student.email} · {resultDetail.student.collegeName}</p>
+                    <p>
+                      {resultDetail.test.testName} — {resultDetail.test.subject} / {resultDetail.test.subpart}
+                    </p>
+                    <p>
+                      Score <strong>{resultDetail.result.totalScore}</strong> / {resultDetail.test.totalMarks}
+                      {" · "}
+                      {resultDetail.result.correctQuestions} correct, {resultDetail.result.incorrectQuestions} wrong, {resultDetail.result.unattemptedQuestions} skipped
+                      {" · "}
+                      {resultDetail.result.accuracyPercentage}% accuracy
+                      {" · "}
+                      {Math.round(resultDetail.result.totalTimeSpentSeconds / 60)} min
+                    </p>
+                    <p className="admin-muted">
+                      Proctoring: {resultDetail.proctoring.tabSwitches} tab switches, {resultDetail.proctoring.focusLosses} focus losses
+                    </p>
+                  </div>
+                  <div className="teacher-result-questions">
+                    {resultDetail.questions.map((q, idx) => {
+                      const sel = q.studentSelection;
+                      const statusClass = !sel.isAttempted
+                        ? "teacher-answer-skipped"
+                        : sel.isCorrect
+                          ? "teacher-answer-correct"
+                          : "teacher-answer-wrong";
+                      return (
+                        <div key={q._id} className={`teacher-result-question ${statusClass}`}>
+                          <div className="teacher-result-qhead">
+                            <span>Q{idx + 1}</span>
+                            <span>{q.questionType}</span>
+                            <span>{sel.isAttempted ? (sel.isCorrect ? "Correct" : "Incorrect") : "Skipped"}</span>
+                            <span>{q.marks} marks{resultDetail.test.isNegativeMarking ? ` (−${q.negativeMarks})` : ""}</span>
+                          </div>
+                          <p className="teacher-result-qtext">{q.questionText}</p>
+                          {q.questionType === "Integer Type" ? (
+                            <p>
+                              Student answer: <strong>{sel.integerAnswer ?? "—"}</strong>
+                              {" · "}
+                              Correct: <strong>{q.correctIntegerAnswer ?? "—"}</strong>
+                            </p>
+                          ) : (
+                            <ul className="teacher-result-options">
+                              {q.options.map((opt) => {
+                                const selected = sel.selectedOptionIds.some((id) => id.toString() === opt._id.toString());
+                                const classes = [
+                                  selected ? "teacher-opt-selected" : "",
+                                  opt.isCorrect ? "teacher-opt-correct" : "",
+                                ].filter(Boolean).join(" ");
+                                return (
+                                  <li key={opt._id} className={classes || undefined}>
+                                    {opt.text}
+                                    {opt.isCorrect ? " ✓" : ""}
+                                    {selected && !opt.isCorrect ? " (selected)" : ""}
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                          {q.explanation ? (
+                            <p className="admin-muted teacher-result-explanation">{q.explanation}</p>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

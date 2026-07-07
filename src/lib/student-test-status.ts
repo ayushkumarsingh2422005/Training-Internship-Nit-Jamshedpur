@@ -57,20 +57,24 @@ export function enrichStudentTest(
   const hasResult = Boolean(result);
   const isSubmitted = accessStatus === "Submitted" || hasResult;
   const isInProgress = accessStatus === "In Progress";
+  const isTerminated = accessStatus === "Terminated";
 
-  const canStart = scheduleCategory === "ongoing" && !isSubmitted && !isInProgress;
-  const canResume = scheduleCategory === "ongoing" && isInProgress;
+  const canStart =
+    scheduleCategory === "ongoing" && !isSubmitted && !isInProgress && !isTerminated;
+  const canResume = scheduleCategory === "ongoing" && isInProgress && !isTerminated;
   const canDownloadReport = scheduleCategory === "completed" && hasResult;
 
   let attemptLabel: string;
   if (isSubmitted) {
     attemptLabel = "Submitted";
+  } else if (isTerminated) {
+    attemptLabel = "Terminated";
   } else if (isInProgress) {
     attemptLabel = "In progress";
   } else if (scheduleCategory === "upcoming") {
     attemptLabel = "Scheduled";
   } else if (scheduleCategory === "completed") {
-    attemptLabel = accessStatus === "Terminated" ? "Terminated" : "Not attempted";
+    attemptLabel = "Not attempted";
   } else {
     attemptLabel = "Not started";
   }

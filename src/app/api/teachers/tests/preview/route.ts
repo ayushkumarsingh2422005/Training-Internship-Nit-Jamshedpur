@@ -5,7 +5,7 @@ import TestQuestion from "@/models/TestQuestion";
 import QuestionBank from "@/models/QuestionBank";
 import Teacher from "@/models/Teacher";
 import { verifyTeacherSessionToken } from "@/lib/teacher-session";
-import { shuffleArray } from "@/lib/exam-utils";
+import { seededShuffleArray } from "@/lib/exam-utils";
 import type { GradingQuestion } from "@/lib/exam-preview-score";
 
 async function getTeacherFromRequest(req: Request) {
@@ -43,7 +43,9 @@ export async function GET(req: Request) {
 
     const questionIds = testQuestions.map((tq) => tq.questionId.toString());
     const orderedIds =
-      test.randomizeQuestions !== false ? shuffleArray(questionIds) : questionIds;
+      test.randomizeQuestions !== false
+        ? seededShuffleArray(questionIds, test._id.toString())
+        : questionIds;
 
     const orderMap = new Map(testQuestions.map((tq) => [tq.questionId.toString(), tq]));
     const questionsFromBank = await QuestionBank.find({

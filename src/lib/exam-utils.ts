@@ -8,6 +8,46 @@ export function shuffleArray<T>(arr: T[]): T[] {
   return copy;
 }
 
+/** Deterministic shuffle — same seed yields same order (for preview consistency). */
+export function seededShuffleArray<T>(arr: T[], seed: string): T[] {
+  const copy = [...arr];
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  const random = () => {
+    hash = (hash * 1664525 + 1013904223) >>> 0;
+    return hash / 0x100000000;
+  };
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+export const PROCTOR_TAB_WARN_THRESHOLD = 3;
+export const PROCTOR_FOCUS_WARN_THRESHOLD = 5;
+
+export function isProctorFlagged(tabSwitches: number, focusLosses: number): boolean {
+  return (
+    tabSwitches >= PROCTOR_TAB_WARN_THRESHOLD ||
+    focusLosses >= PROCTOR_FOCUS_WARN_THRESHOLD
+  );
+}
+
+export function getProctorWarningMessage(tabSwitches: number, focusLosses: number): string | null {
+  const parts: string[] = [];
+  if (tabSwitches >= PROCTOR_TAB_WARN_THRESHOLD) {
+    parts.push(`${tabSwitches} tab switch${tabSwitches === 1 ? "" : "es"}`);
+  }
+  if (focusLosses >= PROCTOR_FOCUS_WARN_THRESHOLD) {
+    parts.push(`${focusLosses} focus loss${focusLosses === 1 ? "" : "es"}`);
+  }
+  if (parts.length === 0) return null;
+  return `Proctoring: ${parts.join(", ")}. Repeated violations may invalidate your attempt.`;
+}
+
 export type QuestionTiming = { questionId: string; elapsedSeconds: number };
 
 export function getQuestionElapsed(

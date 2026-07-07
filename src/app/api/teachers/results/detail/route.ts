@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import connectDB from "@/lib/mongodb";
 import Test from "@/models/Test";
 import Teacher from "@/models/Teacher";
@@ -9,82 +8,59 @@ import TestResult from "@/models/TestResult";
 import StudentAnswer from "@/models/StudentAnswer";
 import TestQuestion from "@/models/TestQuestion";
 import QuestionBank from "@/models/QuestionBank";
-import { verifyStudentSessionToken } from "@/lib/student-session";
+import { verifyTeacherSessionToken } from "@/lib/teacher-session";
 
-async function getStudent() {
-  const headersList = await headers();
-  const authHeader = headersList.get("authorization");
+async function getTeacherFromRequest(req: Request) {
+  const authHeader = req.headers.get("authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
-
   const token = authHeader.substring(7);
-  const payload = await verifyStudentSessionToken(token);
+  const payload = await verifyTeacherSessionToken(token);
   if (!payload) return null;
 
   await connectDB();
-  return Application.findOne({ email: payload.email, phoneNumber: payload.phoneNumber }).lean();
+  return Teacher.findOne({ email: payload.email, phoneNumber: payload.phoneNumber });
 }
 
 export async function GET(req: Request) {
-  const student = await getStudent();
-  if (!student) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
+    const teacher = await getTeacherFromRequest(req);
+    if (!teacher) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
-    const testId = searchParams.get("testId");
-
-    if (!testId) {
-      return NextResponse.json({ error: "Missing testId parameter." }, { status: 400 });
+    const resultId = searchParams.get("resultId");
+    if (!resultId) {
+      return NextResponse.json({ error: "Missing resultId." }, { status: 400 });
     }
 
-    await connectDB();
-
-    // Ensure Teacher model is registered (prevents Next.js HMR tree-shaking from omitting model)
-    const _teacherModel = Teacher.modelName;
-
-    // 1. Fetch Test & Populate Teacher
-    const test = await Test.findById(testId).populate("createdBy", "fullName").lean() as any;
-    if (!test) {
-      return NextResponse.json({ error: "Test not found." }, { status: 404 });
-    }
-
-    // Ensure the test window has closed
-    const now = new Date();
-    const end = new Date(test.endDateTime);
-    if (now <= end) {
-      return NextResponse.json(
-        { error: "Result details are only available after the test window has closed." },
-        { status: 403 }
-      );
-    }
-
-    // 2. Fetch Student Access
-    const access = await StudentTestAccess.findOne({ studentId: student._id, testId }).lean();
-    if (!access) {
-      return NextResponse.json({ error: "No access record found for this test." }, { status: 404 });
-    }
-
-    // 3. Fetch TestResult
-    const result = await TestResult.findOne({ accessId: access._id }).lean();
+    const result = await TestResult.findById(resultId).lean();
     if (!result) {
-      return NextResponse.json({ error: "No results submitted for this test." }, { status: 404 });
+      return NextResponse.json({ error: "Result not found." }, { status: 404 });
     }
 
-    // 4. Fetch Student Answers
-    const studentAnswers = await StudentAnswer.find({ accessId: access._id }).lean();
+    const test = await Test.findOne({ _id: result.testId, createdBy: teacher._id }).lean();
+    if (!test) {
+      return NextResponse.json({ error: "Result not found." }, { status: 404 });
+    }
 
-    // 5. Fetch Questions in the order the student saw them
+    const access = await StudentTestAccess.findById(result.accessId).lean();
+    const student = await Application.findById(result.studentId).lean();
+    if (!access || !student) {
+      return NextResponse.json({ error: "Submission record incomplete." }, { status: 404 });
+    }
+
+    const studentAnswers = await StudentAnswer.find({ accessId: access._id }).lean();
     const testQuestions = await TestQuestion.find({ testId: test._id }).sort({ order: 1 }).lean();
+    const questionsFromBank = await QuestionBank.find({
+      _id: { $in: testQuestions.map((tq) => tq.questionId) },
+    }).lean();
+
     const orderMap = new Map(testQuestions.map((tq) => [tq.questionId.toString(), tq]));
     const questionOrder =
       access.questionOrder && access.questionOrder.length > 0
         ? (access.questionOrder as string[])
         : testQuestions.map((tq) => tq.questionId.toString());
-
-    const questionsFromBank = await QuestionBank.find({
-      _id: { $in: testQuestions.map((tq) => tq.questionId) },
-    }).lean();
 
     const detailedQuestions = questionOrder
       .map((qId) => {
@@ -104,7 +80,7 @@ export async function GET(req: Request) {
         if (qBank.questionType === "Single Correct") {
           if (selectedOptionIds.length > 0) {
             isAttempted = true;
-            const correctOption = qBank.options.find((opt: { isCorrect?: boolean; _id: unknown }) => opt.isCorrect);
+            const correctOption = qBank.options.find((opt: { isCorrect?: boolean }) => opt.isCorrect);
             if (correctOption && correctOption._id.toString() === selectedOptionIds[0].toString()) {
               isCorrect = true;
             }
@@ -115,7 +91,6 @@ export async function GET(req: Request) {
             const correctOptionIds = qBank.options
               .filter((opt: { isCorrect?: boolean }) => opt.isCorrect)
               .map((opt: { _id: unknown }) => String(opt._id));
-
             isCorrect =
               correctOptionIds.length === selectedOptionIds.length &&
               selectedOptionIds.every((id) => correctOptionIds.includes(id.toString()));
@@ -123,9 +98,7 @@ export async function GET(req: Request) {
         } else if (qBank.questionType === "Integer Type") {
           if (integerAnswer !== null) {
             isAttempted = true;
-            if (qBank.correctIntegerAnswer === integerAnswer) {
-              isCorrect = true;
-            }
+            if (qBank.correctIntegerAnswer === integerAnswer) isCorrect = true;
           }
         }
 
@@ -153,16 +126,14 @@ export async function GET(req: Request) {
         testName: test.testName,
         subject: test.subject,
         subpart: test.subpart,
-        durationMinutes: test.durationMinutes,
         totalMarks: test.totalMarks,
         isNegativeMarking: test.isNegativeMarking,
-        teacherName: test.createdBy?.fullName || "Assigned Instructor",
       },
       student: {
         fullName: student.fullName,
         internId: student.internId,
-        collegeName: student.collegeName,
         email: student.email,
+        collegeName: student.collegeName,
       },
       result: {
         totalScore: result.totalScore,
@@ -172,10 +143,16 @@ export async function GET(req: Request) {
         accuracyPercentage: result.accuracyPercentage,
         totalTimeSpentSeconds: result.totalTimeSpentSeconds,
       },
+      proctoring: {
+        tabSwitches: access.tabSwitches ?? 0,
+        focusLosses: access.focusLosses ?? 0,
+        startedAt: access.startedAt,
+        submittedAt: access.submittedAt,
+      },
       questions: detailedQuestions,
     });
   } catch (error) {
-    console.error("GET /api/student/tests/result-report error:", error);
+    console.error("GET /api/teachers/results/detail error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

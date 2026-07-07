@@ -9,8 +9,10 @@ import {
   upsertQuestionTiming,
   type QuestionTiming,
   shouldBlockExamShortcut,
+  getProctorWarningMessage,
 } from "@/lib/exam-utils";
-import { authHeaders } from "@/lib/teacher-session-client";
+import { authHeaders as teacherAuthHeaders } from "@/lib/teacher-session-client";
+import { authHeaders as studentAuthHeaders } from "@/lib/student-session-client";
 import { computePreviewScore, type GradingQuestion } from "@/lib/exam-preview-score";
 import {
   loadDraftPreview,
@@ -18,6 +20,7 @@ import {
 } from "@/lib/teacher-exam-preview";
 import { ExamEntryScreen } from "@/components/ExamEntryScreen";
 import { ExamResultScreen } from "@/components/ExamResultScreen";
+import { IconActionButton, IconActionGroup } from "@/components/IconActionButton";
 import type { ExamStudentProfile, ExamSubmitResult } from "@/lib/exam-entry-types";
 
 type ExamEngineProps = {
@@ -80,6 +83,11 @@ export function ExamEngine({
   const [showSubmitConfirmModal, setShowSubmitConfirmModal] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [markedForReview, setMarkedForReview] = useState<Set<string>>(new Set());
+  const [fullscreenError, setFullscreenError] = useState<string | null>(null);
+  const autostartTriggeredRef = useRef(false);
 
   const startBtnRef = useRef<HTMLButtonElement>(null);
   const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -90,6 +98,7 @@ export function ExamEngine({
   const questionTimingsRef = useRef<QuestionTiming[]>([]);
   const questionExpiryHandledRef = useRef<Set<string>>(new Set());
   const autoSubmitTriggeredRef = useRef(false);
+  const attemptStartedRef = useRef(false);
   const gradingQuestionsRef = useRef<GradingQuestion[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,13 +111,30 @@ export function ExamEngine({
   currentQIndexRef.current = currentQIndex;
   questionTimingsRef.current = questionTimings;
 
+  const applyServerSubmitResult = useCallback((result: ExamSubmitResult) => {
+    const scope = testData?._id && studentHash ? `${testData._id}_${studentHash}` : getStorageScope();
+    if (testData?._id && studentHash) {
+      localStorage.removeItem(`exam_active_${testData._id}_${studentHash}`);
+      localStorage.removeItem(`exam_answers_${testData._id}_${studentHash}`);
+      localStorage.removeItem(`exam_answers_meta_${testData._id}_${studentHash}`);
+      localStorage.removeItem(`exam_qindex_${testData._id}_${studentHash}`);
+      localStorage.removeItem(`exam_review_${testData._id}_${studentHash}`);
+    } else if (isPreview) {
+      localStorage.removeItem(`exam_active_${scope}`);
+      localStorage.removeItem(`exam_answers_${scope}`);
+      localStorage.removeItem(`exam_qindex_${scope}`);
+    }
+    setIsExamActive(false);
+    setSubmitResultModal(result);
+  }, [testData?._id, studentHash, getStorageScope, isPreview]);
+
   const syncToServer = useCallback(
     async (
       payload: {
         answers?: Record<string, unknown>;
         currentQuestionIndex?: number;
         questionTimings?: QuestionTiming[];
-        event?: "answer" | "tab_switch" | "focus_loss" | "heartbeat" | "question_nav";
+        event?: "start" | "answer" | "tab_switch" | "focus_loss" | "heartbeat" | "question_nav";
       } = {},
     ) => {
       if (isPreview) {
@@ -119,10 +145,11 @@ export function ExamEngine({
         }
         return;
       }
+      setSyncStatus("saving");
       try {
         const res = await fetch("/api/student/tests/sync", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...studentAuthHeaders() },
           body: JSON.stringify({
             studentHash,
             secureToken,
@@ -133,17 +160,59 @@ export function ExamEngine({
           }),
         });
         const data = await res.json();
+        if (res.ok && data.expired && data.result) {
+          applyServerSubmitResult({
+            totalScore: data.result.totalScore,
+            correctQuestions: data.result.correctQuestions,
+            incorrectQuestions: data.result.incorrectQuestions,
+            unattemptedQuestions: data.result.unattemptedQuestions,
+            accuracyPercentage: data.result.accuracyPercentage,
+            autoSubmitted: true,
+          });
+          return;
+        }
+        if (res.ok && data.forceExit && data.result) {
+          applyServerSubmitResult({
+            totalScore: data.result.totalScore,
+            correctQuestions: data.result.correctQuestions,
+            incorrectQuestions: data.result.incorrectQuestions,
+            unattemptedQuestions: data.result.unattemptedQuestions,
+            accuracyPercentage: data.result.accuracyPercentage,
+            autoSubmitted: true,
+          });
+          return;
+        }
         if (res.ok) {
+          if (data.attemptStarted) attemptStartedRef.current = true;
           setProctorStats({
             tabSwitches: data.tabSwitches ?? 0,
             focusLosses: data.focusLosses ?? 0,
           });
+          if (typeof data.timeLeftSeconds === "number") {
+            setTimeLeft(data.timeLeftSeconds);
+            if (data.attemptStarted) {
+              initialTimeLeftRef.current = data.timeLeftSeconds;
+            }
+          }
+          setSyncStatus("saved");
+          setLastSavedAt(new Date());
+        } else {
+          if (data.forceExit) {
+            setIsExamActive(false);
+            if (document.fullscreenElement) {
+              await document.exitFullscreen().catch(() => undefined);
+            }
+            setError(data.error || "This exam attempt is no longer active.");
+            return;
+          }
+          setSyncStatus("error");
         }
       } catch (err) {
         console.error("Sync failed", err);
+        setSyncStatus("error");
       }
     },
-    [isPreview, studentHash, secureToken],
+    [isPreview, studentHash, secureToken, applyServerSubmitResult],
   );
 
   const scheduleSync = useCallback(
@@ -231,11 +300,16 @@ export function ExamEngine({
     syncToServer({
       answers: answersRef.current,
       currentQuestionIndex: currentQIndexRef.current,
-      event: "heartbeat",
+      questionTimings: questionTimingsRef.current,
+      event: attemptStartedRef.current ? "heartbeat" : "start",
     });
+    if (!attemptStartedRef.current) {
+      attemptStartedRef.current = true;
+    }
   }, [testData, syncToServer, getStorageScope]);
 
   const enterFullscreen = useCallback(async () => {
+    setFullscreenError(null);
     try {
       const elem = document.documentElement as HTMLElement & {
         requestFullscreen?: (options?: FullscreenOptions) => Promise<void>;
@@ -243,13 +317,14 @@ export function ExamEngine({
       };
 
       if (elem.requestFullscreen) {
-        await elem.requestFullscreen({ navigationUI: "hide" });
+        try {
+          await elem.requestFullscreen({ navigationUI: "hide" });
+        } catch {
+          await elem.requestFullscreen();
+        }
       } else if (elem.webkitRequestFullscreen) {
         await elem.webkitRequestFullscreen();
       } else {
-        alert(
-          "Your browser does not support full-screen mode. The exam will continue in windowed mode.",
-        );
         setIsFullscreen(true);
         activateExam();
         return;
@@ -259,8 +334,8 @@ export function ExamEngine({
       activateExam();
     } catch (err) {
       console.error("Error entering fullscreen:", err);
-      alert(
-        "Could not enter full-screen mode. Please click the button again and allow full-screen when prompted.",
+      setFullscreenError(
+        "Full-screen was blocked. Click “Begin examination” again and choose Allow when your browser asks for permission.",
       );
     }
   }, [activateExam]);
@@ -315,7 +390,7 @@ export function ExamEngine({
           }
 
           const res = await fetch(`/api/teachers/tests/preview?id=${previewTestId}`, {
-            headers: authHeaders(),
+            headers: teacherAuthHeaders(),
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || "Failed to load preview.");
@@ -353,8 +428,45 @@ export function ExamEngine({
 
         const res = await fetch(
           `/api/student/tests/exam-data?studentHash=${studentHash}&secureToken=${secureToken}`,
+          { headers: studentAuthHeaders() },
         );
         const data = await res.json();
+        if (data.expired && data.result) {
+          if (data.test && data.student) {
+            setTestData({
+              _id: "expired",
+              testName: data.test.testName,
+              subject: data.test.subject,
+              subpart: data.test.subpart,
+              durationMinutes: 0,
+              totalMarks: 0,
+              isNegativeMarking: false,
+              randomizeQuestions: false,
+              instructions: "",
+            });
+            setStudentProfile({
+              fullName: data.student.fullName,
+              fatherName: "",
+              internId: data.student.internId ?? null,
+              email: "",
+              phoneNumber: "",
+              collegeName: "",
+              schoolName: "",
+              subject: data.test.subject,
+              subpart: data.test.subpart,
+              rollNumber: null,
+            });
+          }
+          applyServerSubmitResult({
+            totalScore: data.result.totalScore,
+            correctQuestions: data.result.correctQuestions,
+            incorrectQuestions: data.result.incorrectQuestions,
+            unattemptedQuestions: data.result.unattemptedQuestions,
+            accuracyPercentage: data.result.accuracyPercentage,
+            autoSubmitted: data.result.autoSubmitted ?? true,
+          });
+          return;
+        }
         if (!res.ok) throw new Error(data.error || "Failed to load exam.");
 
         setTestData(data.test);
@@ -372,23 +484,60 @@ export function ExamEngine({
         });
 
         const testId = data.test._id;
+        attemptStartedRef.current = Boolean(data.attemptStarted);
         const activeKey = `exam_active_${testId}_${studentHash}`;
         const savedActive = localStorage.getItem(activeKey);
-        if (savedActive === "true") setIsExamActive(true);
+        if (savedActive === "true") {
+          if (data.attemptStarted) {
+            setIsExamActive(true);
+          } else {
+            localStorage.removeItem(activeKey);
+          }
+        }
 
         const answersKey = `exam_answers_${testId}_${studentHash}`;
+        const answersMetaKey = `exam_answers_meta_${testId}_${studentHash}`;
+        const reviewKey = `exam_review_${testId}_${studentHash}`;
         const savedAnswers = localStorage.getItem(answersKey);
+        const savedMetaRaw = localStorage.getItem(answersMetaKey);
         let localAnswers: Record<string, unknown> = {};
-        if (savedAnswers) {
+        let localUpdatedAt = 0;
+        if (savedMetaRaw) {
+          try {
+            const meta = JSON.parse(savedMetaRaw) as { updatedAt?: number; answers?: Record<string, unknown> };
+            localUpdatedAt = meta.updatedAt ?? 0;
+            localAnswers = meta.answers ?? {};
+          } catch {
+            /* ignore */
+          }
+        } else if (savedAnswers) {
           try {
             localAnswers = JSON.parse(savedAnswers);
+            localUpdatedAt = Date.now();
           } catch {
             /* ignore */
           }
         }
 
-        const mergedAnswers = { ...(data.answersDraft ?? {}), ...localAnswers };
+        const serverUpdatedAt = data.answersDraftUpdatedAt
+          ? new Date(data.answersDraftUpdatedAt).getTime()
+          : 0;
+        const serverAnswers = (data.answersDraft ?? {}) as Record<string, unknown>;
+        const mergedAnswers =
+          localUpdatedAt > serverUpdatedAt
+            ? { ...serverAnswers, ...localAnswers }
+            : { ...localAnswers, ...serverAnswers };
         setAnswers(mergedAnswers);
+
+        const savedReview = localStorage.getItem(reviewKey);
+        if (savedReview) {
+          try {
+            const ids = JSON.parse(savedReview) as string[];
+            setMarkedForReview(new Set(ids));
+          } catch {
+            /* ignore */
+          }
+        }
 
         const qIndexKey = `exam_qindex_${testId}_${studentHash}`;
         const savedQIndex = localStorage.getItem(qIndexKey);
@@ -414,14 +563,24 @@ export function ExamEngine({
       }
     }
     loadExam();
-  }, [studentHash, secureToken, isPreview, previewDraft, previewTestId]);
+  }, [studentHash, secureToken, isPreview, previewDraft, previewTestId, applyServerSubmitResult]);
+
+  useEffect(() => {
+    if (!testData?._id || !isExamActive || isPreview) return;
+    const scope = getStorageScope();
+    const now = Date.now();
+    localStorage.setItem(`exam_answers_${scope}`, JSON.stringify(answers));
+    localStorage.setItem(
+      `exam_answers_meta_${scope}`,
+      JSON.stringify({ updatedAt: now, answers }),
+    );
+    scheduleSync({ answers, currentQuestionIndex: currentQIndex, questionTimings, event: "answer" });
+  }, [answers, testData, currentQIndex, questionTimings, scheduleSync, getStorageScope, isExamActive, isPreview]);
 
   useEffect(() => {
     if (!testData?._id) return;
-    const scope = getStorageScope();
-    localStorage.setItem(`exam_answers_${scope}`, JSON.stringify(answers));
-    scheduleSync({ answers, currentQuestionIndex: currentQIndex, questionTimings, event: "answer" });
-  }, [answers, testData, currentQIndex, questionTimings, scheduleSync, getStorageScope]);
+    localStorage.setItem(`exam_review_${getStorageScope()}`, JSON.stringify([...markedForReview]));
+  }, [markedForReview, testData, getStorageScope]);
 
   useEffect(() => {
     if (!testData?._id) return;
@@ -546,16 +705,51 @@ export function ExamEngine({
 
         const res = await fetch("/api/student/tests/submit", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...studentAuthHeaders() },
           body: JSON.stringify({ studentHash, secureToken, answers: answersRef.current }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to submit exam.");
+        if (!res.ok) {
+          if (data.forceExit && data.result) {
+            applyServerSubmitResult({
+              totalScore: data.result.totalScore,
+              correctQuestions: data.result.correctQuestions,
+              incorrectQuestions: data.result.incorrectQuestions,
+              unattemptedQuestions: data.result.unattemptedQuestions,
+              accuracyPercentage: data.result.accuracyPercentage,
+              autoSubmitted: true,
+            });
+            return;
+          }
+          if (data.forceExit) {
+            setIsExamActive(false);
+            if (document.fullscreenElement) {
+              await document.exitFullscreen().catch(() => undefined);
+            }
+            setError(data.error || "This exam attempt is no longer active.");
+            return;
+          }
+          throw new Error(data.error || "Failed to submit exam.");
+        }
+
+        if (data.autoExpired && data.result) {
+          applyServerSubmitResult({
+            totalScore: data.result.totalScore,
+            correctQuestions: data.result.correctQuestions,
+            incorrectQuestions: data.result.incorrectQuestions,
+            unattemptedQuestions: data.result.unattemptedQuestions,
+            accuracyPercentage: data.result.accuracyPercentage,
+            autoSubmitted: true,
+          });
+          return;
+        }
 
         if (testData?._id) {
           localStorage.removeItem(`exam_active_${testData._id}_${studentHash}`);
           localStorage.removeItem(`exam_answers_${testData._id}_${studentHash}`);
+          localStorage.removeItem(`exam_answers_meta_${testData._id}_${studentHash}`);
           localStorage.removeItem(`exam_qindex_${testData._id}_${studentHash}`);
+          localStorage.removeItem(`exam_review_${testData._id}_${studentHash}`);
         }
 
         if (document.fullscreenElement) {
@@ -685,21 +879,71 @@ export function ExamEngine({
   useEffect(() => {
     if (!isExamActive) return;
     const heartbeat = setInterval(() => {
+      const currentQ = questions[currentQIndexRef.current];
+      let timings = questionTimingsRef.current;
+      if (currentQ?.timeLimitSeconds > 0) {
+        timings = flushQuestionTime(currentQ._id, currentQ.timeLimitSeconds);
+      }
       syncToServer({
         answers: answersRef.current,
         currentQuestionIndex: currentQIndexRef.current,
-        questionTimings: questionTimingsRef.current,
+        questionTimings: timings,
         event: "heartbeat",
       });
     }, 30000);
     return () => clearInterval(heartbeat);
-  }, [isExamActive, syncToServer]);
+  }, [isExamActive, syncToServer, questions, flushQuestionTime]);
 
   useEffect(() => {
-    if (!loading && autostart && !isExamActive) {
-      startBtnRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (
+      !loading &&
+      autostart &&
+      !isExamActive &&
+      !submitResultModal &&
+      testData &&
+      !isPreview &&
+      !autostartTriggeredRef.current
+    ) {
+      autostartTriggeredRef.current = true;
+      setGuidelinesAccepted(true);
+      requestAnimationFrame(() => startBtnRef.current?.focus());
     }
-  }, [loading, autostart, isExamActive]);
+  }, [loading, autostart, isExamActive, submitResultModal, testData, isPreview]);
+
+  function isQuestionAnswered(qId: string, ansMap: Record<string, unknown> = answers) {
+    const ans = ansMap[qId];
+    return ans !== undefined && ans !== "" && (!Array.isArray(ans) || ans.length > 0);
+  }
+
+  function getSubmitSummary() {
+    let answered = 0;
+    let unanswered = 0;
+    let marked = 0;
+    for (const q of questions) {
+      if (isQuestionAnswered(q._id)) answered++;
+      else unanswered++;
+      if (markedForReview.has(q._id)) marked++;
+    }
+    return { answered, unanswered, marked, total: questions.length };
+  }
+
+  function toggleMarkForReview(qId: string) {
+    setMarkedForReview((prev) => {
+      const next = new Set(prev);
+      if (next.has(qId)) next.delete(qId);
+      else next.add(qId);
+      return next;
+    });
+  }
+
+  function clearCurrentAnswer() {
+    if (!currentQuestion || currentQuestionLocked) return;
+    setAnswers((prev) => {
+      const next = { ...prev };
+      delete next[currentQuestion._id];
+      return next;
+    });
+  }
 
   function handleAnswerChange(qId: string, val: unknown) {
     setAnswers((prev) => ({ ...prev, [qId]: val }));
@@ -739,6 +983,8 @@ export function ExamEngine({
     currentQuestionLocked &&
     nextNavIndex === null &&
     questionTimeLeft === 0;
+  const proctorWarning = getProctorWarningMessage(proctorStats.tabSwitches, proctorStats.focusLosses);
+  const submitSummary = showSubmitConfirmModal ? getSubmitSummary() : null;
 
   if (loading) {
     return (
@@ -792,6 +1038,7 @@ export function ExamEngine({
           onGuidelinesAcceptedChange={setGuidelinesAccepted}
           onStart={() => void enterFullscreen()}
           startButtonRef={startBtnRef}
+          fullscreenError={fullscreenError}
         />
       ) : null}
 
@@ -811,10 +1058,24 @@ export function ExamEngine({
           )}
 
           <header className="exam-header">
-            <div>
+            <div className="exam-header-main">
               <h1>{testData.testName}</h1>
               <span className="exam-header-meta">
                 Tab switches: {proctorStats.tabSwitches} | Focus losses: {proctorStats.focusLosses}
+                {!isPreview ? (
+                  <>
+                    {" | "}
+                    <span className={`exam-sync-status exam-sync-status--${syncStatus}`}>
+                      {syncStatus === "saving"
+                        ? "Saving…"
+                        : syncStatus === "error"
+                          ? "Save failed — retrying on next change"
+                          : lastSavedAt
+                            ? `Last saved ${lastSavedAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
+                            : "Connected"}
+                    </span>
+                  </>
+                ) : null}
               </span>
             </div>
             <div className="exam-header-actions">
@@ -828,22 +1089,47 @@ export function ExamEngine({
                   ? `Elapsed: ${formatTime(Math.max(0, initialTimeLeftRef.current - timeLeft))}`
                   : `Left: ${formatTime(timeLeft)}`}
               </button>
-              <button
-                type="button"
-                className="exam-finish-btn"
+              <IconActionButton
+                icon="finish"
+                label="Submit and finish the examination"
+                text={isSubmitting ? "Submitting…" : "Finish exam"}
+                showLabel
+                size="lg"
+                variant="success"
+                className="exam-finish-btn-like"
                 onClick={() => setShowSubmitConfirmModal(true)}
                 disabled={isSubmitting}
-              >
-                {isSubmitting ? "Submitting…" : "Finish exam"}
-              </button>
+              />
             </div>
           </header>
+
+          {proctorWarning ? (
+            <div className="exam-proctor-warning" role="alert">
+              {proctorWarning}
+            </div>
+          ) : null}
 
           <div className="exam-body">
             <div className="exam-main">
               <div className="exam-question-card">
                 <div className="exam-question-head">
-                  <h2>Question {currentQIndex + 1}</h2>
+                  <div className="exam-question-title-row">
+                    <h2>Question {currentQIndex + 1}</h2>
+                    {!currentQuestionLocked ? (
+                      <IconActionButton
+                        icon={markedForReview.has(currentQuestion._id) ? "bookmarkOff" : "bookmark"}
+                        label={
+                          markedForReview.has(currentQuestion._id)
+                            ? "Remove review mark from this question"
+                            : "Mark this question for review"
+                        }
+                        tooltipPlacement="right"
+                        className="exam-review-btn"
+                        variant={markedForReview.has(currentQuestion._id) ? "exam-active" : "exam"}
+                        onClick={() => toggleMarkForReview(currentQuestion._id)}
+                      />
+                    ) : null}
+                  </div>
                   <div className="exam-question-badges">
                     {currentQuestion?.timeLimitSeconds > 0 && questionTimeLeft !== null && (
                       <button
@@ -929,6 +1215,7 @@ export function ExamEngine({
                   {currentQuestion?.type === "Integer Type" && (
                     <input
                       type="number"
+                      step="1"
                       className="exam-integer-input"
                       value={(answers[currentQuestion._id] as string) || ""}
                       disabled={currentQuestionLocked}
@@ -940,22 +1227,41 @@ export function ExamEngine({
               </div>
 
               <div className="exam-nav-row">
-                <button
-                  type="button"
-                  className="exam-nav-btn"
-                  onClick={() => prevNavIndex !== null && goToQuestion(prevNavIndex)}
-                  disabled={prevNavIndex === null}
-                >
-                  ← Previous
-                </button>
-                <button
-                  type="button"
-                  className="exam-nav-btn"
-                  onClick={() => nextNavIndex !== null && goToQuestion(nextNavIndex)}
-                  disabled={nextNavIndex === null}
-                >
-                  Next →
-                </button>
+                <IconActionGroup>
+                  <IconActionButton
+                    icon="previous"
+                    label="Go to previous question"
+                    text="Previous"
+                    showLabel
+                    size="lg"
+                    variant="exam"
+                    onClick={() => prevNavIndex !== null && goToQuestion(prevNavIndex)}
+                    disabled={prevNavIndex === null}
+                  />
+                  <IconActionButton
+                    icon="clear"
+                    label="Clear your answer for this question"
+                    text="Clear"
+                    showLabel
+                    size="lg"
+                    variant="exam"
+                    className="exam-clear-btn"
+                    onClick={clearCurrentAnswer}
+                    disabled={
+                      currentQuestionLocked || !isQuestionAnswered(currentQuestion._id)
+                    }
+                  />
+                  <IconActionButton
+                    icon="next"
+                    label="Go to next question"
+                    text="Next"
+                    showLabel
+                    size="lg"
+                    variant="exam"
+                    onClick={() => nextNavIndex !== null && goToQuestion(nextNavIndex)}
+                    disabled={nextNavIndex === null}
+                  />
+                </IconActionGroup>
               </div>
             </div>
 
@@ -977,13 +1283,16 @@ export function ExamEngine({
                       Time expired
                     </span>
                   ) : null}
+                  <span>
+                    <span className="exam-palette-dot exam-palette-dot--review" aria-hidden />
+                    Marked
+                  </span>
                 </div>
               </div>
               <div className="exam-palette-grid">
                 {questions.map((q, idx) => {
-                  const ans = answers[q._id];
-                  const isAnswered =
-                    ans !== undefined && ans !== "" && (!Array.isArray(ans) || ans.length > 0);
+                  const isAnswered = isQuestionAnswered(q._id);
+                  const isMarked = markedForReview.has(q._id);
                   const isExpired =
                     hasPerQuestionTimers &&
                     isQuestionTimeExpired(q.timeLimitSeconds, questionTimings, q._id);
@@ -994,7 +1303,7 @@ export function ExamEngine({
                       onClick={() => !isExpired && goToQuestion(idx)}
                       disabled={isExpired}
                       title={isExpired ? "Time for this question has expired" : undefined}
-                      className={`exam-palette-btn${isAnswered ? " exam-palette-btn--answered" : ""}${currentQIndex === idx ? " exam-palette-btn--current" : ""}${isExpired ? " exam-palette-btn--expired" : ""}`}
+                      className={`exam-palette-btn${isAnswered ? " exam-palette-btn--answered" : ""}${isMarked ? " exam-palette-btn--review" : ""}${currentQIndex === idx ? " exam-palette-btn--current" : ""}${isExpired ? " exam-palette-btn--expired" : ""}`}
                     >
                       {idx + 1}
                     </button>
@@ -1021,6 +1330,14 @@ export function ExamEngine({
               Are you sure you want to submit the test? You will not be able to change your answers
               after submission.
             </p>
+            {submitSummary ? (
+              <ul className="exam-submit-summary">
+                <li><strong>{submitSummary.answered}</strong> answered</li>
+                <li><strong>{submitSummary.unanswered}</strong> unanswered</li>
+                <li><strong>{submitSummary.marked}</strong> marked for review</li>
+                <li><strong>{submitSummary.total}</strong> total questions</li>
+              </ul>
+            ) : null}
             <div className="exam-confirm-actions">
               <button
                 type="button"
