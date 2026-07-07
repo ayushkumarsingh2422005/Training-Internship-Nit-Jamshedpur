@@ -54,3 +54,25 @@ export function upsertQuestionTiming(
   }
   return [...timings, { questionId, elapsedSeconds }];
 }
+
+/** Block refresh, devtools, view-source, print, and similar shortcuts during CBT. */
+export function shouldBlockExamShortcut(event: KeyboardEvent): boolean {
+  const key = event.key;
+  const keyLower = key.toLowerCase();
+  const mod = event.ctrlKey || event.metaKey;
+
+  if (/^F(1[0-2]|[1-9])$/i.test(key)) return true;
+
+  if (mod && event.shiftKey && ["i", "j", "c", "k", "r", "delete"].includes(keyLower)) {
+    return true;
+  }
+
+  if (mod && !event.altKey) {
+    if (["r", "s", "p", "u", "w", "n", "t", "g", "h"].includes(keyLower)) return true;
+  }
+
+  if (event.altKey && (keyLower === "arrowleft" || keyLower === "arrowright")) return true;
+
+  return false;
+}
+

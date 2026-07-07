@@ -4,6 +4,7 @@ import Test from "@/models/Test";
 import TestQuestion from "@/models/TestQuestion";
 import QuestionBank from "@/models/QuestionBank";
 import StudentTestAccess from "@/models/StudentTestAccess";
+import Application from "@/models/Application";
 import { shuffleArray } from "@/lib/exam-utils";
 
 export async function GET(req: Request) {
@@ -108,14 +109,34 @@ export async function GET(req: Request) {
         ? access.answersDraft
         : {};
 
+    const student = await Application.findById(access.studentId).lean();
+    if (!student) {
+      return NextResponse.json({ error: "Student record not found." }, { status: 404 });
+    }
+
     return NextResponse.json({
       test: {
         _id: test._id,
         testName: test.testName,
+        subject: test.subject,
+        subpart: test.subpart,
         durationMinutes: test.durationMinutes,
         instructions: test.instructions || "",
+        totalMarks: test.totalMarks,
         isNegativeMarking: test.isNegativeMarking,
         randomizeQuestions: test.randomizeQuestions !== false,
+      },
+      student: {
+        fullName: student.fullName,
+        fatherName: student.fatherName,
+        internId: student.internId ?? null,
+        email: student.email,
+        phoneNumber: student.phoneNumber,
+        collegeName: student.collegeName,
+        schoolName: student.schoolName,
+        subject: student.subject,
+        subpart: student.subpart,
+        rollNumber: student.collegeRegistrationNumber ?? null,
       },
       questions: sanitizedQuestions,
       timeLeftSeconds,

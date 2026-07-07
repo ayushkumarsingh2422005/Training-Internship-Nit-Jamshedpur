@@ -8,11 +8,24 @@ import {
   isQuestionTimeExpired,
   upsertQuestionTiming,
   type QuestionTiming,
+  shouldBlockExamShortcut,
 } from "@/lib/exam-utils";
+import { authHeaders } from "@/lib/teacher-session-client";
+import { computePreviewScore, type GradingQuestion } from "@/lib/exam-preview-score";
+import {
+  loadDraftPreview,
+  normalizeDraftPreviewQuestions,
+} from "@/lib/teacher-exam-preview";
+import { ExamEntryScreen } from "@/components/ExamEntryScreen";
+import { ExamResultScreen } from "@/components/ExamResultScreen";
+import type { ExamStudentProfile, ExamSubmitResult } from "@/lib/exam-entry-types";
 
 type ExamEngineProps = {
-  studentHash: string;
-  secureToken: string;
+  studentHash?: string;
+  secureToken?: string;
+  previewMode?: boolean;
+  previewTestId?: string | null;
+  previewDraft?: boolean;
 };
 
 type ExamQuestion = {
@@ -26,14 +39,7 @@ type ExamQuestion = {
   type?: string;
 };
 
-type SubmitResult = {
-  totalScore: number;
-  correctQuestions: number;
-  incorrectQuestions: number;
-  unattemptedQuestions: number;
-  accuracyPercentage: number;
-  autoSubmitted?: boolean;
-};
+type SubmitResult = ExamSubmitResult;
 
 function isFullscreenActive() {
   return !!(
@@ -42,10 +48,18 @@ function isFullscreenActive() {
   );
 }
 
-export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
+export function ExamEngine({
+  studentHash,
+  secureToken,
+  previewMode = false,
+  previewTestId = null,
+  previewDraft = false,
+}: ExamEngineProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const autostart = searchParams.get("autostart") === "1";
+  const autostart = !previewMode && searchParams.get("autostart") === "1";
+  const isPreview = previewMode;
+  const previewScope = previewTestId || "draft";
 
   const [loading, setLoading] = useState(true);
   const [testData, setTestData] = useState<any>(null);
@@ -60,8 +74,10 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
   const [isExamActive, setIsExamActive] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [proctorStats, setProctorStats] = useState({ tabSwitches: 0, focusLosses: 0 });
-  const [showAutostartPrompt, setShowAutostartPrompt] = useState(false);
+  const [studentProfile, setStudentProfile] = useState<ExamStudentProfile | null>(null);
+  const [guidelinesAccepted, setGuidelinesAccepted] = useState(false);
   const [submitResultModal, setSubmitResultModal] = useState<SubmitResult | null>(null);
+  const [showSubmitConfirmModal, setShowSubmitConfirmModal] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -73,9 +89,14 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
   const currentQIndexRef = useRef(0);
   const questionTimingsRef = useRef<QuestionTiming[]>([]);
   const questionExpiryHandledRef = useRef<Set<string>>(new Set());
-  const autostartHandledRef = useRef(false);
   const autoSubmitTriggeredRef = useRef(false);
+  const gradingQuestionsRef = useRef<GradingQuestion[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const getStorageScope = useCallback(() => {
+    if (isPreview) return `preview_${previewScope}`;
+    return `${testData?._id}_${studentHash}`;
+  }, [isPreview, previewScope, testData?._id, studentHash]);
 
   answersRef.current = answers;
   currentQIndexRef.current = currentQIndex;
@@ -90,6 +111,14 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
         event?: "answer" | "tab_switch" | "focus_loss" | "heartbeat" | "question_nav";
       } = {},
     ) => {
+      if (isPreview) {
+        if (payload.event === "tab_switch") {
+          setProctorStats((prev) => ({ ...prev, tabSwitches: prev.tabSwitches + 1 }));
+        } else if (payload.event === "focus_loss") {
+          setProctorStats((prev) => ({ ...prev, focusLosses: prev.focusLosses + 1 }));
+        }
+        return;
+      }
       try {
         const res = await fetch("/api/student/tests/sync", {
           method: "POST",
@@ -114,7 +143,7 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
         console.error("Sync failed", err);
       }
     },
-    [studentHash, secureToken],
+    [isPreview, studentHash, secureToken],
   );
 
   const scheduleSync = useCallback(
@@ -196,7 +225,7 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
   const activateExam = useCallback(() => {
     setIsExamActive(true);
     if (testData?._id) {
-      localStorage.setItem(`exam_active_${testData._id}_${studentHash}`, "true");
+      localStorage.setItem(`exam_active_${getStorageScope()}`, "true");
     }
     questionSessionStartRef.current = Date.now();
     syncToServer({
@@ -204,11 +233,9 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
       currentQuestionIndex: currentQIndexRef.current,
       event: "heartbeat",
     });
-  }, [testData, studentHash, syncToServer]);
+  }, [testData, syncToServer, getStorageScope]);
 
   const enterFullscreen = useCallback(async () => {
-    setShowAutostartPrompt(false);
-
     try {
       const elem = document.documentElement as HTMLElement & {
         requestFullscreen?: (options?: FullscreenOptions) => Promise<void>;
@@ -241,6 +268,89 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
   useEffect(() => {
     async function loadExam() {
       try {
+        if (isPreview) {
+          if (previewDraft) {
+            const payload = loadDraftPreview();
+            if (!payload) {
+              throw new Error("Preview data not found. Return to the teacher dashboard and click Preview again.");
+            }
+            const { displayQuestions, gradingQuestions } = normalizeDraftPreviewQuestions(
+              payload.questions,
+              payload.test.randomizeQuestions,
+            );
+            gradingQuestionsRef.current = gradingQuestions;
+            const timeLeftSeconds = payload.test.durationMinutes * 60;
+            setTestData({ _id: "preview-draft", ...payload.test });
+            setStudentProfile(
+              payload.student ?? {
+                fullName: "Preview Candidate",
+                fatherName: "—",
+                internId: "PREVIEW",
+                email: "—",
+                phoneNumber: "—",
+                collegeName: "Preview session",
+                schoolName: "—",
+                subject: payload.test.subject ?? "—",
+                subpart: payload.test.subpart ?? "—",
+                rollNumber: null,
+              },
+            );
+            setQuestions(displayQuestions);
+            setTimeLeft(timeLeftSeconds);
+            initialTimeLeftRef.current = timeLeftSeconds;
+            setQuestionTimings([]);
+            questionTimingsRef.current = [];
+            setAnswers({});
+            setCurrentQIndex(0);
+            const initialQ = displayQuestions[0];
+            if (initialQ?.timeLimitSeconds > 0) {
+              setQuestionTimeLeft(initialQ.timeLimitSeconds);
+              questionSessionStartRef.current = Date.now();
+            }
+            return;
+          }
+
+          if (!previewTestId) {
+            throw new Error("Missing test id for preview.");
+          }
+
+          const res = await fetch(`/api/teachers/tests/preview?id=${previewTestId}`, {
+            headers: authHeaders(),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Failed to load preview.");
+
+          gradingQuestionsRef.current = data.gradingQuestions ?? [];
+          setTestData(data.test);
+          setStudentProfile(data.student);
+          setQuestions(
+            data.questions.map((q: ExamQuestion) => ({ ...q, type: q.questionType })),
+          );
+          setTimeLeft(data.timeLeftSeconds);
+          initialTimeLeftRef.current = data.timeLeftSeconds;
+          setQuestionTimings(data.questionTimings ?? []);
+          questionTimingsRef.current = data.questionTimings ?? [];
+          setAnswers(data.answersDraft ?? {});
+          setCurrentQIndex(data.currentQuestionIndex ?? 0);
+
+          const initialQ = data.questions[data.currentQuestionIndex ?? 0];
+          if (initialQ?.timeLimitSeconds > 0) {
+            setQuestionTimeLeft(
+              getQuestionRemainingSeconds(
+                initialQ.timeLimitSeconds,
+                data.questionTimings ?? [],
+                initialQ._id,
+              ),
+            );
+            questionSessionStartRef.current = Date.now();
+          }
+          return;
+        }
+
+        if (!studentHash || !secureToken) {
+          throw new Error("Missing exam credentials.");
+        }
+
         const res = await fetch(
           `/api/student/tests/exam-data?studentHash=${studentHash}&secureToken=${secureToken}`,
         );
@@ -248,6 +358,7 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
         if (!res.ok) throw new Error(data.error || "Failed to load exam.");
 
         setTestData(data.test);
+        setStudentProfile(data.student);
         setQuestions(
           data.questions.map((q: ExamQuestion) => ({ ...q, type: q.questionType })),
         );
@@ -303,18 +414,19 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
       }
     }
     loadExam();
-  }, [studentHash, secureToken]);
+  }, [studentHash, secureToken, isPreview, previewDraft, previewTestId]);
 
   useEffect(() => {
     if (!testData?._id) return;
-    localStorage.setItem(`exam_answers_${testData._id}_${studentHash}`, JSON.stringify(answers));
+    const scope = getStorageScope();
+    localStorage.setItem(`exam_answers_${scope}`, JSON.stringify(answers));
     scheduleSync({ answers, currentQuestionIndex: currentQIndex, questionTimings, event: "answer" });
-  }, [answers, testData, studentHash, currentQIndex, questionTimings, scheduleSync]);
+  }, [answers, testData, currentQIndex, questionTimings, scheduleSync, getStorageScope]);
 
   useEffect(() => {
     if (!testData?._id) return;
-    localStorage.setItem(`exam_qindex_${testData._id}_${studentHash}`, currentQIndex.toString());
-  }, [currentQIndex, testData, studentHash]);
+    localStorage.setItem(`exam_qindex_${getStorageScope()}`, currentQIndex.toString());
+  }, [currentQIndex, testData, getStorageScope]);
 
   useEffect(() => {
     if (loading || timeLeft <= 0 || !isExamActive) return;
@@ -393,12 +505,12 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
   ]);
 
   const submitTest = useCallback(
-    async (force = false, meta?: { autoExpired?: boolean }) => {
+    async (meta?: { autoExpired?: boolean }) => {
       if (isSubmitting) return;
-      if (!force && !window.confirm("Are you sure you want to submit the test?")) return;
 
       setIsSubmitting(true);
       setSubmitError(null);
+      setShowSubmitConfirmModal(false);
 
       try {
         const currentQ = questions[currentQIndexRef.current];
@@ -406,6 +518,30 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
         if (currentQ?.timeLimitSeconds > 0) {
           timings = flushQuestionTime(currentQ._id, currentQ.timeLimitSeconds);
         }
+
+        if (isPreview) {
+          const result = computePreviewScore(
+            gradingQuestionsRef.current,
+            answersRef.current,
+            Boolean(testData?.isNegativeMarking),
+          );
+
+          localStorage.removeItem(`exam_active_${getStorageScope()}`);
+          localStorage.removeItem(`exam_answers_${getStorageScope()}`);
+          localStorage.removeItem(`exam_qindex_${getStorageScope()}`);
+
+          if (document.fullscreenElement) {
+            await document.exitFullscreen().catch(() => undefined);
+          }
+
+          setIsExamActive(false);
+          setSubmitResultModal({
+            ...result,
+            autoSubmitted: meta?.autoExpired ?? false,
+          });
+          return;
+        }
+
         await syncToServer({ answers: answersRef.current, questionTimings: timings, event: "heartbeat" });
 
         const res = await fetch("/api/student/tests/submit", {
@@ -441,22 +577,34 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
         setIsSubmitting(false);
       }
     },
-    [questions, flushQuestionTime, syncToServer, studentHash, secureToken, testData, isSubmitting],
+    [
+      questions,
+      flushQuestionTime,
+      syncToServer,
+      studentHash,
+      secureToken,
+      testData,
+      isSubmitting,
+      isPreview,
+      getStorageScope,
+    ],
   );
 
   function closeSubmitResultModal() {
     setSubmitResultModal(null);
-    router.push("/student-portal");
+    router.push(isPreview ? "/teacher-portal" : "/student-portal");
   }
 
   useEffect(() => {
     if (!loading && timeLeft <= 0 && isExamActive && !autoSubmitTriggeredRef.current) {
       autoSubmitTriggeredRef.current = true;
-      submitTest(true, { autoExpired: true });
+      submitTest({ autoExpired: true });
     }
   }, [timeLeft, loading, isExamActive, submitTest]);
 
   useEffect(() => {
+    if (!isExamActive) return;
+
     const handleFsChange = () => {
       const active = isFullscreenActive();
       setIsFullscreen(active);
@@ -518,6 +666,22 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isExamActive]);
 
+  const blockExamShortcuts = !loading && !error && !submitResultModal && Boolean(testData);
+
+  useEffect(() => {
+    if (!blockExamShortcuts) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (shouldBlockExamShortcut(event)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [blockExamShortcuts]);
+
   useEffect(() => {
     if (!isExamActive) return;
     const heartbeat = setInterval(() => {
@@ -532,14 +696,10 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
   }, [isExamActive, syncToServer]);
 
   useEffect(() => {
-    if (loading || error || isExamActive || autostartHandledRef.current) return;
-
-    if (autostart) {
-      autostartHandledRef.current = true;
-      setShowAutostartPrompt(true);
-      startBtnRef.current?.focus();
+    if (!loading && autostart && !isExamActive) {
+      startBtnRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
-  }, [loading, error, isExamActive, autostart]);
+  }, [loading, autostart, isExamActive]);
 
   function handleAnswerChange(qId: string, val: unknown) {
     setAnswers((prev) => ({ ...prev, [qId]: val }));
@@ -561,9 +721,11 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
   }
 
   const currentQuestion = questions[currentQIndex];
+  const hasPerQuestionTimers = questions.some((q) => q.timeLimitSeconds > 0);
   const prevNavIndex = findNavigableIndex(currentQIndex, -1);
   const nextNavIndex = findNavigableIndex(currentQIndex, 1);
   const currentQuestionLocked =
+    hasPerQuestionTimers &&
     !!currentQuestion &&
     currentQuestion.timeLimitSeconds > 0 &&
     (questionTimeLeft === 0 ||
@@ -573,7 +735,10 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
         currentQuestion._id,
       ));
   const showEndOfExamNotice =
-    currentQuestionLocked && nextNavIndex === null && questionTimeLeft === 0;
+    hasPerQuestionTimers &&
+    currentQuestionLocked &&
+    nextNavIndex === null &&
+    questionTimeLeft === 0;
 
   if (loading) {
     return (
@@ -589,72 +754,45 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
       <div className="exam-error">
         <h2>Error Loading Exam</h2>
         <p>{error}</p>
-        <button type="button" className="btn btn-green" onClick={() => router.push("/student-portal")}>
-          Back to Student Portal
+        <button
+          type="button"
+          className="btn btn-green"
+          onClick={() => router.push(isPreview ? "/teacher-portal" : "/student-portal")}
+        >
+          {isPreview ? "Back to teacher portal" : "Back to Student Portal"}
         </button>
       </div>
     );
   }
 
   return (
-    <div className={`exam-root${isExamActive ? " exam-root--active" : ""}`}>
-      {showAutostartPrompt && !isExamActive && (
-        <div className="exam-autostart-overlay">
-          <h2 style={{ margin: 0, fontSize: "1.5rem" }}>Enter Secure Exam Mode</h2>
-          <p>
-            Tap the button below to start your exam in full-screen mode. This is required for a fair and
-            proctored examination.
-          </p>
-          <button
-            ref={startBtnRef}
-            type="button"
-            className="exam-start-btn"
-            style={{ width: "auto", minWidth: "260px" }}
-            onClick={() => void enterFullscreen()}
-          >
-            Start Exam in Full Screen
-          </button>
+    <div className={`exam-root${isExamActive ? " exam-root--active" : ""}${isPreview ? " exam-root--preview" : ""}`}>
+      {isPreview ? (
+        <div className="exam-preview-banner" role="status">
+          Teacher preview
         </div>
-      )}
+      ) : null}
 
-      {!isExamActive && !showAutostartPrompt ? (
-        <div className="exam-start">
-          <div className="exam-start-card">
-            <h2>{testData.testName}</h2>
-            <div className="exam-start-meta">
-              <div className="exam-start-meta-item">
-                <span>Duration</span>
-                <strong>{testData.durationMinutes} minutes</strong>
-              </div>
-              <div className="exam-start-meta-item">
-                <span>Negative marking</span>
-                <strong style={{ color: testData.isNegativeMarking ? "#c62828" : "var(--green-dark)" }}>
-                  {testData.isNegativeMarking ? "Yes" : "No"}
-                </strong>
-              </div>
-            </div>
-            {testData.randomizeQuestions && (
-              <p className="exam-start-note">
-                Questions appear in a randomized order unique to your session.
-              </p>
-            )}
-            <div className="exam-start-guidelines">
-              <h4>Important guidelines</h4>
-              <p>
-                {testData.instructions ||
-                  "This test runs in secure full-screen mode. Tab switches and focus losses are recorded. Your answers sync to the server automatically."}
-              </p>
-            </div>
-            <button
-              ref={startBtnRef}
-              type="button"
-              className="exam-start-btn"
-              onClick={() => void enterFullscreen()}
-            >
-              Start Exam &amp; Enter Full Screen
-            </button>
-          </div>
-        </div>
+      {!isExamActive && submitResultModal && testData && studentProfile ? (
+        <ExamResultScreen
+          result={submitResultModal}
+          testName={testData.testName}
+          studentName={studentProfile.fullName}
+          isPreview={isPreview}
+          onBack={closeSubmitResultModal}
+        />
+      ) : null}
+
+      {!isExamActive && !submitResultModal && studentProfile && testData ? (
+        <ExamEntryScreen
+          testData={testData}
+          student={studentProfile}
+          questionCount={questions.length}
+          guidelinesAccepted={guidelinesAccepted}
+          onGuidelinesAcceptedChange={setGuidelinesAccepted}
+          onStart={() => void enterFullscreen()}
+          startButtonRef={startBtnRef}
+        />
       ) : null}
 
       {isExamActive ? (
@@ -690,7 +828,12 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
                   ? `Elapsed: ${formatTime(Math.max(0, initialTimeLeftRef.current - timeLeft))}`
                   : `Left: ${formatTime(timeLeft)}`}
               </button>
-              <button type="button" className="exam-finish-btn" onClick={() => submitTest(false)} disabled={isSubmitting}>
+              <button
+                type="button"
+                className="exam-finish-btn"
+                onClick={() => setShowSubmitConfirmModal(true)}
+                disabled={isSubmitting}
+              >
                 {isSubmitting ? "Submitting…" : "Finish exam"}
               </button>
             </div>
@@ -828,10 +971,12 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
                     <span className="exam-palette-dot exam-palette-dot--unanswered" aria-hidden />
                     Unanswered
                   </span>
-                  <span>
-                    <span className="exam-palette-dot exam-palette-dot--expired" aria-hidden />
-                    Time expired
-                  </span>
+                  {hasPerQuestionTimers ? (
+                    <span>
+                      <span className="exam-palette-dot exam-palette-dot--expired" aria-hidden />
+                      Time expired
+                    </span>
+                  ) : null}
                 </div>
               </div>
               <div className="exam-palette-grid">
@@ -839,7 +984,9 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
                   const ans = answers[q._id];
                   const isAnswered =
                     ans !== undefined && ans !== "" && (!Array.isArray(ans) || ans.length > 0);
-                  const isExpired = isQuestionTimeExpired(q.timeLimitSeconds, questionTimings, q._id);
+                  const isExpired =
+                    hasPerQuestionTimers &&
+                    isQuestionTimeExpired(q.timeLimitSeconds, questionTimings, q._id);
                   return (
                     <button
                       key={q._id}
@@ -859,42 +1006,39 @@ export function ExamEngine({ studentHash, secureToken }: ExamEngineProps) {
         </>
       ) : null}
 
-      {submitResultModal ? (
-        <div className="exam-result-backdrop" role="dialog" aria-modal="true" aria-labelledby="exam-result-title">
-          <div className="exam-result-modal">
-            <h2 id="exam-result-title" className="exam-result-title">
-              {submitResultModal.autoSubmitted ? "Time's up — test submitted" : "Test submitted successfully"}
+      {showSubmitConfirmModal ? (
+        <div
+          className="exam-result-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="exam-submit-confirm-title"
+        >
+          <div className="exam-result-modal exam-confirm-modal">
+            <h2 id="exam-submit-confirm-title" className="exam-result-title">
+              Submit examination?
             </h2>
-            {submitResultModal.autoSubmitted ? (
-              <p className="exam-result-note">
-                Your exam time ended and your answers were submitted automatically.
-              </p>
-            ) : null}
-            <div className="exam-result-stats">
-              <div className="exam-result-stat exam-result-stat--score">
-                <span>Total score</span>
-                <strong>{submitResultModal.totalScore}</strong>
-              </div>
-              <div className="exam-result-stat">
-                <span>Correct</span>
-                <strong>{submitResultModal.correctQuestions}</strong>
-              </div>
-              <div className="exam-result-stat">
-                <span>Incorrect</span>
-                <strong>{submitResultModal.incorrectQuestions}</strong>
-              </div>
-              <div className="exam-result-stat">
-                <span>Unattempted</span>
-                <strong>{submitResultModal.unattemptedQuestions}</strong>
-              </div>
-              <div className="exam-result-stat">
-                <span>Accuracy</span>
-                <strong>{submitResultModal.accuracyPercentage}%</strong>
-              </div>
+            <p className="exam-result-note">
+              Are you sure you want to submit the test? You will not be able to change your answers
+              after submission.
+            </p>
+            <div className="exam-confirm-actions">
+              <button
+                type="button"
+                className="exam-confirm-btn exam-confirm-btn--cancel"
+                onClick={() => setShowSubmitConfirmModal(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="exam-confirm-btn exam-confirm-btn--submit"
+                onClick={() => void submitTest()}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Submitting…" : "Submit test"}
+              </button>
             </div>
-            <button type="button" className="exam-start-btn exam-result-btn" onClick={closeSubmitResultModal}>
-              Back to student portal
-            </button>
           </div>
         </div>
       ) : null}

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { saveTeacherSession, getTeacherSession, clearTeacherSession, authHeaders } from "@/lib/teacher-session-client";
 import { useTopLoading } from "@/components/TopLoadingProvider";
 import { dateTimeLocalToISO, toDateTimeLocalValue } from "@/lib/datetime-local";
+import { saveDraftPreview } from "@/lib/teacher-exam-preview";
 
 function statusBadgeClass(status: string) {
   return status === "Published" ? "teacher-badge teacher-badge-published" : "teacher-badge teacher-badge-draft";
@@ -475,6 +476,52 @@ export function TeacherDashboard() {
     e.target.value = ""; // clear input
   }
 
+  function handlePreviewDraft() {
+    if (formQuestions.length === 0) {
+      alert("Add at least one question before previewing.");
+      return;
+    }
+    if (!testForm.testName.trim()) {
+      alert("Enter a test name before previewing.");
+      return;
+    }
+    const selectedModule = teacher?.assignedModules?.[testForm.moduleIndex];
+    if (!selectedModule) {
+      alert("Please select a valid assigned module.");
+      return;
+    }
+    saveDraftPreview({
+      test: {
+        testName: testForm.testName.trim(),
+        subject: selectedModule.subject,
+        subpart: selectedModule.subpart,
+        durationMinutes: testForm.durationMinutes,
+        totalMarks: formQuestions.reduce((acc, q) => acc + (q.marks || 0), 0),
+        instructions: testForm.instructions,
+        isNegativeMarking: testForm.isNegativeMarking,
+        randomizeQuestions: testForm.randomizeQuestions,
+      },
+      student: {
+        fullName: `${teacher.fullName} (Teacher Preview)`,
+        fatherName: "—",
+        internId: "PREVIEW",
+        email: teacher.email,
+        phoneNumber: teacher.phoneNumber,
+        collegeName: "Preview session — unsaved draft",
+        schoolName: "—",
+        subject: selectedModule.subject,
+        subpart: selectedModule.subpart,
+        rollNumber: null,
+      },
+      questions: formQuestions,
+    });
+    window.open("/teacher-portal/preview?draft=1", "_blank", "noopener,noreferrer");
+  }
+
+  function handlePreviewSavedTest(testId: string) {
+    window.open(`/teacher-portal/preview?testId=${testId}`, "_blank", "noopener,noreferrer");
+  }
+
   // Save Test
   async function handleSaveTest() {
     if (!testForm.testName.trim()) {
@@ -663,6 +710,14 @@ export function TeacherDashboard() {
                           <td>{testResults.length}</td>
                           <td>
                             <div className="admin-row-actions">
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-admin"
+                                onClick={() => handlePreviewSavedTest(t._id)}
+                                title="Preview exam in student view"
+                              >
+                                Preview
+                              </button>
                               <button type="button" className="btn btn-sm btn-secondary" onClick={() => toggleExpandTest(t._id)}>
                                 {expanded ? "Hide" : "Results"}
                               </button>
@@ -813,6 +868,15 @@ export function TeacherDashboard() {
           )}
           <div className="admin-filters-actions">
             <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setIsCreatingTest(false); resetTestForm(); }}>Cancel</button>
+            <button
+              type="button"
+              className="btn btn-outline-admin btn-sm"
+              onClick={handlePreviewDraft}
+              disabled={formQuestions.length === 0}
+              title="Try this exam in the student exam engine"
+            >
+              Preview exam
+            </button>
             <button type="button" className="btn btn-green btn-sm" onClick={handleSaveTest} disabled={loading}>{editingTestId ? "Update test" : "Save test"}</button>
           </div>
         </div>
