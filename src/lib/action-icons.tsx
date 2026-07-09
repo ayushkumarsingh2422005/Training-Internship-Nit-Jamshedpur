@@ -33,7 +33,8 @@ export type ActionIconName =
   | "add"
   | "refresh"
   | "play"
-  | "report";
+  | "report"
+  | "palette";
 
 export function ActionIcon({ name, ...props }: { name: ActionIconName } & IconProps) {
   const svgProps = { ...defaults, ...props };
@@ -181,6 +182,15 @@ export function ActionIcon({ name, ...props }: { name: ActionIconName } & IconPr
           <path d="M14 2v6h6" />
           <path d="M8 13h8" />
           <path d="M8 17h5" />
+        </svg>
+      );
+    case "palette":
+      return (
+        <svg {...svgProps}>
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+          <rect x="14" y="14" width="7" height="7" rx="1" />
         </svg>
       );
     default:

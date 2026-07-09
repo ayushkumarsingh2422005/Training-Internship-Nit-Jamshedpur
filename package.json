@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/write-app-version.cjs && next build",
     "start": "node server.cjs",
     "lint": "next lint",
     "db:seed": "tsx scripts/seed-mongodb.ts",

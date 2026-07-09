@@ -22,6 +22,12 @@ import { ExamEntryScreen } from "@/components/ExamEntryScreen";
 import { ExamResultScreen } from "@/components/ExamResultScreen";
 import { IconActionButton, IconActionGroup } from "@/components/IconActionButton";
 import type { ExamStudentProfile, ExamSubmitResult } from "@/lib/exam-entry-types";
+import {
+  EXAM_UI_RELOAD_PROCTOR_GRACE_MS,
+  EXAM_UI_UPDATE_POLL_MS,
+  fetchAppVersion,
+  getExamUiReloadStorageKey,
+} from "@/lib/exam-ui-update";
 
 type ExamEngineProps = {
   studentHash?: string;
@@ -90,6 +96,8 @@ export function ExamEngine({
   const [isCompactUi, setIsCompactUi] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [uiUpdateAvailable, setUiUpdateAvailable] = useState(false);
+  const [uiUpdateReloading, setUiUpdateReloading] = useState(false);
   const autostartTriggeredRef = useRef(false);
 
   const startBtnRef = useRef<HTMLButtonElement>(null);
@@ -103,7 +111,12 @@ export function ExamEngine({
   const autoSubmitTriggeredRef = useRef(false);
   const attemptStartedRef = useRef(false);
   const gradingQuestionsRef = useRef<GradingQuestion[]>([]);
+  const loadedAppVersionRef = useRef<string | null>(null);
+  const proctorGraceUntilRef = useRef(0);
+  const intentionalReloadRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isProctorGraceActive = useCallback(() => Date.now() < proctorGraceUntilRef.current, []);
 
   useEffect(() => {
     setHasHydrated(true);
@@ -229,6 +242,25 @@ export function ExamEngine({
     [isPreview, studentHash, secureToken, applyServerSubmitResult],
   );
 
+  const applyUiUpdateReload = useCallback(async () => {
+    if (isPreview || !studentHash || !secureToken) return;
+    intentionalReloadRef.current = true;
+    setUiUpdateReloading(true);
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    try {
+      await syncToServer({
+        answers: answersRef.current,
+        currentQuestionIndex: currentQIndexRef.current,
+        questionTimings: questionTimingsRef.current,
+        event: "heartbeat",
+      });
+    } catch {
+      /* continue reload even if final sync fails */
+    }
+    sessionStorage.setItem(getExamUiReloadStorageKey(studentHash, secureToken), String(Date.now()));
+    window.location.reload();
+  }, [isPreview, studentHash, secureToken, syncToServer]);
+
   const scheduleSync = useCallback(
     (payload: Parameters<typeof syncToServer>[0]) => {
       if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
@@ -294,6 +326,8 @@ export function ExamEngine({
         answers: answersRef.current,
         event: "question_nav",
       });
+
+      setPaletteOpen(false);
 
       if (nextQ?.timeLimitSeconds > 0) {
         setQuestionTimeLeft(getQuestionRemainingSeconds(nextQ.timeLimitSeconds, timings, nextQ._id));
@@ -804,6 +838,42 @@ export function ExamEngine({
   }
 
   useEffect(() => {
+    if (isPreview || !studentHash || !secureToken) return;
+    const key = getExamUiReloadStorageKey(studentHash, secureToken);
+    if (sessionStorage.getItem(key)) {
+      sessionStorage.removeItem(key);
+      proctorGraceUntilRef.current = Date.now() + EXAM_UI_RELOAD_PROCTOR_GRACE_MS;
+    }
+  }, [isPreview, studentHash, secureToken]);
+
+  useEffect(() => {
+    if (isPreview) return;
+    let cancelled = false;
+
+    async function checkForUiUpdate() {
+      const remoteVersion = await fetchAppVersion();
+      if (!remoteVersion || cancelled) return;
+      if (loadedAppVersionRef.current === null) {
+        loadedAppVersionRef.current = remoteVersion;
+        return;
+      }
+      if (remoteVersion !== loadedAppVersionRef.current) {
+        setUiUpdateAvailable(true);
+      }
+    }
+
+    void checkForUiUpdate();
+    const intervalId = window.setInterval(() => {
+      void checkForUiUpdate();
+    }, EXAM_UI_UPDATE_POLL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [isPreview]);
+
+  useEffect(() => {
     if (!loading && timeLeft <= 0 && isExamActive && !autoSubmitTriggeredRef.current) {
       autoSubmitTriggeredRef.current = true;
       submitTest({ autoExpired: true });
@@ -816,7 +886,7 @@ export function ExamEngine({
     const handleFsChange = () => {
       const active = isFullscreenActive();
       setIsFullscreen(active);
-      if (!active && isExamActive) {
+      if (!active && isExamActive && !isProctorGraceActive() && !intentionalReloadRef.current) {
         syncToServer({ answers: answersRef.current, event: "focus_loss" });
       }
     };
@@ -827,19 +897,19 @@ export function ExamEngine({
       document.removeEventListener("fullscreenchange", handleFsChange);
       document.removeEventListener("webkitfullscreenchange", handleFsChange);
     };
-  }, [isExamActive, syncToServer]);
+  }, [isExamActive, syncToServer, isProctorGraceActive]);
 
   useEffect(() => {
     if (!isExamActive) return;
 
     const handleVisibility = () => {
-      if (document.hidden) {
+      if (document.hidden && !isProctorGraceActive() && !intentionalReloadRef.current) {
         syncToServer({ answers: answersRef.current, event: "tab_switch" });
       }
     };
 
     const handleBlur = () => {
-      if (!isFullscreenActive()) return;
+      if (!isFullscreenActive() || isProctorGraceActive() || intentionalReloadRef.current) return;
       syncToServer({ answers: answersRef.current, event: "focus_loss" });
     };
 
@@ -849,7 +919,7 @@ export function ExamEngine({
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("blur", handleBlur);
     };
-  }, [isExamActive, syncToServer]);
+  }, [isExamActive, syncToServer, isProctorGraceActive]);
 
   useEffect(() => {
     if (!isExamActive) return;
@@ -865,6 +935,7 @@ export function ExamEngine({
   useEffect(() => {
     if (!isExamActive) return;
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (intentionalReloadRef.current) return;
       const msg = "Are you sure you want to exit the exam? Your progress is saved on the server.";
       e.preventDefault();
       e.returnValue = msg;
@@ -1076,7 +1147,9 @@ export function ExamEngine({
   }
 
   return (
-    <div className={`exam-root${isExamActive ? " exam-root--active" : ""}${isPreview ? " exam-root--preview" : ""}`}>
+    <div
+      className={`exam-root${isExamActive ? " exam-root--active" : ""}${isPreview ? " exam-root--preview" : ""}${uiUpdateAvailable ? " exam-root--ui-update" : ""}${showCompactUi && isExamActive ? " exam-root--mobile-exam" : ""}`}
+    >
       {isPreview ? (
         <div className="exam-preview-banner" role="status">
           Teacher preview
@@ -1167,7 +1240,7 @@ export function ExamEngine({
             <div className="exam-header-actions">
               <button
                 type="button"
-                className={`exam-timer exam-timer--toggle ${getExamTimerClass(timeLeft, initialTimeLeftRef.current)}`}
+                className={`exam-timer exam-timer--toggle${showCompactUi ? " exam-timer--compact" : ""} ${getExamTimerClass(timeLeft, initialTimeLeftRef.current)}`}
                 onClick={() => setShowTestElapsed((prev) => !prev)}
                 title={showTestElapsed ? "Click to show time remaining" : "Click to show time elapsed"}
               >
@@ -1182,8 +1255,8 @@ export function ExamEngine({
               <IconActionButton
                 icon="finish"
                 label="Submit and finish the examination"
-                text={isSubmitting ? "Submitting…" : showCompactUi ? "Finish" : "Finish exam"}
-                showLabel={!showCompactUi}
+                text={isSubmitting ? "Submitting…" : showCompactUi ? "Submit" : "Finish exam"}
+                showLabel
                 size={showCompactUi ? "sm" : "lg"}
                 variant="success"
                 className="exam-finish-btn-like"
@@ -1320,15 +1393,28 @@ export function ExamEngine({
                 </div>
               </div>
 
-              <div className="exam-nav-row">
+              <div className={`exam-nav-row${showCompactUi ? " exam-nav-row--mobile" : ""}`}>
                 <IconActionGroup>
+                  {showCompactUi ? (
+                    <IconActionButton
+                      icon="palette"
+                      label={`Question palette — ${answeredCount} of ${questions.length} answered`}
+                      text="Grid"
+                      showLabel
+                      size="sm"
+                      variant={paletteOpen ? "exam-active" : "exam"}
+                      className="exam-palette-nav-btn"
+                      onClick={() => setPaletteOpen((open) => !open)}
+                    />
+                  ) : null}
                   <IconActionButton
                     icon="previous"
                     label="Go to previous question"
-                    text="Previous"
-                    showLabel={!showCompactUi}
+                    text={showCompactUi ? "Prev" : "Previous"}
+                    showLabel
                     size={showCompactUi ? "sm" : "lg"}
                     variant="exam"
+                    className={showCompactUi ? "exam-nav-btn-labeled" : ""}
                     onClick={() => prevNavIndex !== null && goToQuestion(prevNavIndex)}
                     disabled={prevNavIndex === null}
                   />
@@ -1336,10 +1422,10 @@ export function ExamEngine({
                     icon="clear"
                     label="Clear your answer for this question"
                     text="Clear"
-                    showLabel={!showCompactUi}
+                    showLabel
                     size={showCompactUi ? "sm" : "lg"}
                     variant="exam"
-                    className="exam-clear-btn"
+                    className={`exam-clear-btn${showCompactUi ? " exam-nav-btn-labeled" : ""}`}
                     onClick={clearCurrentAnswer}
                     disabled={
                       currentQuestionLocked || !isQuestionAnswered(currentQuestion._id)
@@ -1349,9 +1435,10 @@ export function ExamEngine({
                     icon="next"
                     label="Go to next question"
                     text="Next"
-                    showLabel={!showCompactUi}
+                    showLabel
                     size={showCompactUi ? "sm" : "lg"}
                     variant="exam"
+                    className={showCompactUi ? "exam-nav-btn-labeled" : ""}
                     onClick={() => nextNavIndex !== null && goToQuestion(nextNavIndex)}
                     disabled={nextNavIndex === null}
                   />
@@ -1359,21 +1446,21 @@ export function ExamEngine({
               </div>
             </div>
 
-            <aside className="exam-palette">
+            <aside className={`exam-palette${showCompactUi ? " exam-palette--mobile" : ""}`}>
               {showCompactUi ? (
-                <details
-                  className="exam-palette-collapsible"
-                  open={paletteOpen}
-                  onToggle={(e) => setPaletteOpen(e.currentTarget.open)}
-                >
-                  <summary className="exam-palette-toggle">
-                    <span>Question palette</span>
-                    <span className="exam-palette-toggle-meta">
-                      {answeredCount}/{questions.length} answered · Q{currentQIndex + 1}
-                    </span>
-                  </summary>
-                  <div className="exam-palette-body">{paletteContent}</div>
-                </details>
+                paletteOpen ? (
+                  <div className="exam-palette-mobile-panel">
+                    <button
+                      type="button"
+                      className="exam-palette-mobile-close"
+                      onClick={() => setPaletteOpen(false)}
+                      aria-label="Close question palette"
+                    >
+                      ×
+                    </button>
+                    <div className="exam-palette-body">{paletteContent}</div>
+                  </div>
+                ) : null
               ) : (
                 <div className="exam-palette-shell">
                   <div className="exam-palette-body">{paletteContent}</div>
@@ -1438,6 +1525,26 @@ export function ExamEngine({
               Close
             </button>
           </div>
+        </div>
+      ) : null}
+
+      {uiUpdateAvailable && !isPreview && !submitResultModal ? (
+        <div className="exam-ui-update-banner" role="alert">
+          <div className="exam-ui-update-banner__text">
+            <strong>Exam screen update available</strong>
+            <span>
+              Get the latest layout fixes. Your answers are saved — this reload will not count as a tab
+              switch for 8 seconds after reload.
+            </span>
+          </div>
+          <button
+            type="button"
+            className="exam-ui-update-banner__btn"
+            onClick={() => void applyUiUpdateReload()}
+            disabled={uiUpdateReloading}
+          >
+            {uiUpdateReloading ? "Saving…" : "Update now"}
+          </button>
         </div>
       ) : null}
     </div>
