@@ -2,7 +2,7 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { ExamEngine } from "@/components/ExamEngine";
+import { ExamEngineClient } from "@/components/ExamEngineClient";
 
 function PreviewContent() {
   const searchParams = useSearchParams();
@@ -19,7 +19,7 @@ function PreviewContent() {
   }
 
   return (
-    <ExamEngine
+    <ExamEngineClient
       previewMode
       previewTestId={testId}
       previewDraft={draft}

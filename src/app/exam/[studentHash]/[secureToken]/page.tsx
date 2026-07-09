@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { ExamEngine } from "@/components/ExamEngine";
+import { ExamEngineClient } from "@/components/ExamEngineClient";
 
 export const metadata: Metadata = {
   title: "Secure Exam Portal",
@@ -25,7 +25,7 @@ export default async function ExamPage({
 
   return (
     <Suspense fallback={<ExamLoading />}>
-      <ExamEngine studentHash={studentHash} secureToken={secureToken} />
+      <ExamEngineClient studentHash={studentHash} secureToken={secureToken} />
     </Suspense>
   );
 }

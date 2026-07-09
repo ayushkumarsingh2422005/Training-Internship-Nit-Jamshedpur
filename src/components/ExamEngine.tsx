@@ -87,6 +87,8 @@ export function ExamEngine({
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [markedForReview, setMarkedForReview] = useState<Set<string>>(new Set());
   const [fullscreenError, setFullscreenError] = useState<string | null>(null);
+  const [isCompactUi, setIsCompactUi] = useState(false);
+  const [hasHydrated, setHasHydrated] = useState(false);
   const autostartTriggeredRef = useRef(false);
 
   const startBtnRef = useRef<HTMLButtonElement>(null);
@@ -101,6 +103,17 @@ export function ExamEngine({
   const attemptStartedRef = useRef(false);
   const gradingQuestionsRef = useRef<GradingQuestion[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setHasHydrated(true);
+    const media = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsCompactUi(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  const showCompactUi = hasHydrated && isCompactUi;
 
   const getStorageScope = useCallback(() => {
     if (isPreview) return `preview_${previewScope}`;
@@ -966,6 +979,7 @@ export function ExamEngine({
 
   const currentQuestion = questions[currentQIndex];
   const hasPerQuestionTimers = questions.some((q) => q.timeLimitSeconds > 0);
+  const answeredCount = questions.filter((q) => isQuestionAnswered(q._id)).length;
   const prevNavIndex = findNavigableIndex(currentQIndex, -1);
   const nextNavIndex = findNavigableIndex(currentQIndex, 1);
   const currentQuestionLocked =
@@ -1061,21 +1075,43 @@ export function ExamEngine({
             <div className="exam-header-main">
               <h1>{testData.testName}</h1>
               <span className="exam-header-meta">
-                Tab switches: {proctorStats.tabSwitches} | Focus losses: {proctorStats.focusLosses}
-                {!isPreview ? (
+                {showCompactUi ? (
                   <>
-                    {" | "}
-                    <span className={`exam-sync-status exam-sync-status--${syncStatus}`}>
-                      {syncStatus === "saving"
-                        ? "Saving…"
-                        : syncStatus === "error"
-                          ? "Save failed — retrying on next change"
-                          : lastSavedAt
-                            ? `Last saved ${lastSavedAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
-                            : "Connected"}
-                    </span>
+                    Tabs {proctorStats.tabSwitches} · Focus {proctorStats.focusLosses}
+                    {!isPreview ? (
+                      <>
+                        {" · "}
+                        <span className={`exam-sync-status exam-sync-status--${syncStatus}`}>
+                          {syncStatus === "saving"
+                            ? "Saving"
+                            : syncStatus === "error"
+                              ? "Save failed"
+                              : hasHydrated && lastSavedAt
+                                ? `Saved ${lastSavedAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`
+                                : "Synced"}
+                        </span>
+                      </>
+                    ) : null}
                   </>
-                ) : null}
+                ) : (
+                  <>
+                    Tab switches: {proctorStats.tabSwitches} | Focus losses: {proctorStats.focusLosses}
+                    {!isPreview ? (
+                      <>
+                        {" | "}
+                        <span className={`exam-sync-status exam-sync-status--${syncStatus}`}>
+                          {syncStatus === "saving"
+                            ? "Saving…"
+                            : syncStatus === "error"
+                              ? "Save failed — retrying on next change"
+                              : hasHydrated && lastSavedAt
+                                ? `Last saved ${lastSavedAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
+                                : "Connected"}
+                        </span>
+                      </>
+                    ) : null}
+                  </>
+                )}
               </span>
             </div>
             <div className="exam-header-actions">
@@ -1086,15 +1122,19 @@ export function ExamEngine({
                 title={showTestElapsed ? "Click to show time remaining" : "Click to show time elapsed"}
               >
                 {showTestElapsed
-                  ? `Elapsed: ${formatTime(Math.max(0, initialTimeLeftRef.current - timeLeft))}`
-                  : `Left: ${formatTime(timeLeft)}`}
+                  ? showCompactUi
+                    ? `+${formatTime(Math.max(0, initialTimeLeftRef.current - timeLeft))}`
+                    : `Elapsed: ${formatTime(Math.max(0, initialTimeLeftRef.current - timeLeft))}`
+                  : showCompactUi
+                    ? formatTime(timeLeft)
+                    : `Left: ${formatTime(timeLeft)}`}
               </button>
               <IconActionButton
                 icon="finish"
                 label="Submit and finish the examination"
-                text={isSubmitting ? "Submitting…" : "Finish exam"}
-                showLabel
-                size="lg"
+                text={isSubmitting ? "Submitting…" : showCompactUi ? "Finish" : "Finish exam"}
+                showLabel={!showCompactUi}
+                size={showCompactUi ? "sm" : "lg"}
                 variant="success"
                 className="exam-finish-btn-like"
                 onClick={() => setShowSubmitConfirmModal(true)}
@@ -1143,8 +1183,12 @@ export function ExamEngine({
                         }
                       >
                         {showQuestionElapsed
-                          ? `Q elapsed: ${formatTime(Math.max(0, currentQuestion.timeLimitSeconds - questionTimeLeft))}`
-                          : `Q left: ${formatTime(questionTimeLeft)}`}
+                          ? showCompactUi
+                            ? `+${formatTime(Math.max(0, currentQuestion.timeLimitSeconds - questionTimeLeft))}`
+                            : `Q elapsed: ${formatTime(Math.max(0, currentQuestion.timeLimitSeconds - questionTimeLeft))}`
+                          : showCompactUi
+                            ? `Q ${formatTime(questionTimeLeft)}`
+                            : `Q left: ${formatTime(questionTimeLeft)}`}
                       </button>
                     )}
                     <span className="exam-badge">{currentQuestion?.type}</span>
@@ -1232,8 +1276,8 @@ export function ExamEngine({
                     icon="previous"
                     label="Go to previous question"
                     text="Previous"
-                    showLabel
-                    size="lg"
+                    showLabel={!showCompactUi}
+                    size={showCompactUi ? "sm" : "lg"}
                     variant="exam"
                     onClick={() => prevNavIndex !== null && goToQuestion(prevNavIndex)}
                     disabled={prevNavIndex === null}
@@ -1242,8 +1286,8 @@ export function ExamEngine({
                     icon="clear"
                     label="Clear your answer for this question"
                     text="Clear"
-                    showLabel
-                    size="lg"
+                    showLabel={!showCompactUi}
+                    size={showCompactUi ? "sm" : "lg"}
                     variant="exam"
                     className="exam-clear-btn"
                     onClick={clearCurrentAnswer}
@@ -1255,8 +1299,8 @@ export function ExamEngine({
                     icon="next"
                     label="Go to next question"
                     text="Next"
-                    showLabel
-                    size="lg"
+                    showLabel={!showCompactUi}
+                    size={showCompactUi ? "sm" : "lg"}
                     variant="exam"
                     onClick={() => nextNavIndex !== null && goToQuestion(nextNavIndex)}
                     disabled={nextNavIndex === null}
@@ -1266,50 +1310,60 @@ export function ExamEngine({
             </div>
 
             <aside className="exam-palette">
-              <div className="exam-palette-head">
-                <h3>Question palette</h3>
-                <div className="exam-palette-legend">
-                  <span>
-                    <span className="exam-palette-dot exam-palette-dot--answered" aria-hidden />
-                    Answered
+              <details className="exam-palette-collapsible">
+                <summary className="exam-palette-toggle">
+                  <span>Question palette</span>
+                  <span className="exam-palette-toggle-meta">
+                    {answeredCount}/{questions.length} answered · Q{currentQIndex + 1}
                   </span>
-                  <span>
-                    <span className="exam-palette-dot exam-palette-dot--unanswered" aria-hidden />
-                    Unanswered
-                  </span>
-                  {hasPerQuestionTimers ? (
-                    <span>
-                      <span className="exam-palette-dot exam-palette-dot--expired" aria-hidden />
-                      Time expired
-                    </span>
-                  ) : null}
-                  <span>
-                    <span className="exam-palette-dot exam-palette-dot--review" aria-hidden />
-                    Marked
-                  </span>
+                </summary>
+                <div className="exam-palette-body">
+                  <div className="exam-palette-head">
+                    <h3>Question palette</h3>
+                    <div className="exam-palette-legend">
+                      <span>
+                        <span className="exam-palette-dot exam-palette-dot--answered" aria-hidden />
+                        Answered
+                      </span>
+                      <span>
+                        <span className="exam-palette-dot exam-palette-dot--unanswered" aria-hidden />
+                        Unanswered
+                      </span>
+                      {hasPerQuestionTimers ? (
+                        <span>
+                          <span className="exam-palette-dot exam-palette-dot--expired" aria-hidden />
+                          Time expired
+                        </span>
+                      ) : null}
+                      <span>
+                        <span className="exam-palette-dot exam-palette-dot--review" aria-hidden />
+                        Marked
+                      </span>
+                    </div>
+                  </div>
+                  <div className="exam-palette-grid">
+                    {questions.map((q, idx) => {
+                      const isAnswered = isQuestionAnswered(q._id);
+                      const isMarked = markedForReview.has(q._id);
+                      const isExpired =
+                        hasPerQuestionTimers &&
+                        isQuestionTimeExpired(q.timeLimitSeconds, questionTimings, q._id);
+                      return (
+                        <button
+                          key={q._id}
+                          type="button"
+                          onClick={() => !isExpired && goToQuestion(idx)}
+                          disabled={isExpired}
+                          title={isExpired ? "Time for this question has expired" : undefined}
+                          className={`exam-palette-btn${isAnswered ? " exam-palette-btn--answered" : ""}${isMarked ? " exam-palette-btn--review" : ""}${currentQIndex === idx ? " exam-palette-btn--current" : ""}${isExpired ? " exam-palette-btn--expired" : ""}`}
+                        >
+                          {idx + 1}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-              <div className="exam-palette-grid">
-                {questions.map((q, idx) => {
-                  const isAnswered = isQuestionAnswered(q._id);
-                  const isMarked = markedForReview.has(q._id);
-                  const isExpired =
-                    hasPerQuestionTimers &&
-                    isQuestionTimeExpired(q.timeLimitSeconds, questionTimings, q._id);
-                  return (
-                    <button
-                      key={q._id}
-                      type="button"
-                      onClick={() => !isExpired && goToQuestion(idx)}
-                      disabled={isExpired}
-                      title={isExpired ? "Time for this question has expired" : undefined}
-                      className={`exam-palette-btn${isAnswered ? " exam-palette-btn--answered" : ""}${isMarked ? " exam-palette-btn--review" : ""}${currentQIndex === idx ? " exam-palette-btn--current" : ""}${isExpired ? " exam-palette-btn--expired" : ""}`}
-                    >
-                      {idx + 1}
-                    </button>
-                  );
-                })}
-              </div>
+              </details>
             </aside>
           </div>
         </>
