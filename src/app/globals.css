@@ -4853,11 +4853,15 @@ img {
   color: var(--text);
   font-family: var(--font-noto-sans), "Noto Sans", Arial, sans-serif;
   position: relative;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .exam-root--active {
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
+  max-width: 100%;
 }
 
 .exam-loading,
@@ -5010,6 +5014,9 @@ img {
   padding: 2rem;
   text-align: center;
   color: #fff;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .exam-pause-overlay h2 {
@@ -5033,6 +5040,7 @@ img {
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
+  flex-shrink: 0;
   box-shadow: 0 2px 6px rgba(27, 94, 32, 0.18);
 }
 
@@ -5179,18 +5187,21 @@ img {
 
 .exam-body {
   display: flex;
-  flex: 1;
+  flex: 1 1 0;
   overflow: hidden;
   min-height: 0;
+  max-width: 100%;
 }
 
 .exam-main {
   flex: 1;
   padding: 1.25rem;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  max-width: 100%;
 }
 
 .exam-question-card {
@@ -5200,7 +5211,9 @@ img {
   box-shadow: var(--shadow);
   padding: 1.5rem;
   flex: 1;
-  overflow: visible;
+  overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .exam-question-head {
@@ -5280,23 +5293,29 @@ img {
   line-height: 1.6;
   margin-bottom: 1.5rem;
   color: var(--text);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .exam-options {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .exam-option {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   padding: 0.85rem 1rem;
   border: 2px solid var(--border);
   border-radius: 8px;
   cursor: pointer;
   background: #fff;
   transition: border-color 0.15s ease, background 0.15s ease;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .exam-option:hover {
@@ -5312,7 +5331,16 @@ img {
   width: 1.15rem;
   height: 1.15rem;
   margin-right: 0.85rem;
+  margin-top: 0.15rem;
   accent-color: var(--green);
+  flex-shrink: 0;
+}
+
+.exam-option span {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .exam-integer-input {
@@ -5363,14 +5391,27 @@ img {
   border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
+  flex: 0 0 min(300px, 100%);
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.exam-palette-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .exam-palette-collapsible {
   display: flex;
   flex-direction: column;
+  flex: 1 1 0;
   min-height: 0;
-  height: 100%;
+  overflow: hidden;
 }
 
 .exam-palette-toggle {
@@ -5386,6 +5427,8 @@ img {
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--green-dark);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .exam-palette-toggle::-webkit-details-marker {
@@ -5396,6 +5439,10 @@ img {
   font-size: 0.72rem;
   font-weight: 600;
   color: #64748b;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .exam-palette-body {
@@ -5403,6 +5450,7 @@ img {
   flex-direction: column;
   min-height: 0;
   flex: 1;
+  overflow: hidden;
 }
 
 .exam-palette-head {
@@ -5413,6 +5461,7 @@ img {
   gap: 0.3rem 0.5rem;
   padding: 0.4rem 0.75rem;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .exam-palette-head h3 {
@@ -5493,6 +5542,7 @@ img {
   font-size: 0.72rem;
   font-weight: 600;
   line-height: 1.35;
+  flex-shrink: 0;
 }
 
 .exam-question-actions {
@@ -6008,13 +6058,37 @@ img {
 }
 
 .exam-palette-grid {
-  padding: 1rem 1.15rem;
+  padding: 0.75rem 0.85rem 0.85rem;
   overflow-y: auto;
-  flex: 1;
+  overflow-x: hidden;
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: 100%;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.55rem;
   align-content: start;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+}
+
+.exam-palette-grid::-webkit-scrollbar {
+  width: 8px;
+}
+
+.exam-palette-grid::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.exam-palette-grid::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 4px;
+}
+
+.exam-palette-grid::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }
 
 .exam-palette-btn {
@@ -6213,24 +6287,31 @@ img {
 @media (max-width: 900px) {
   .exam-body {
     flex-direction: column;
+    overflow-x: hidden;
   }
 
   .exam-main {
     padding: 0.65rem;
     flex: 1;
     min-height: 0;
+    overflow-x: hidden;
   }
 
   .exam-palette {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex: 0 0 auto;
     border-left: none;
     border-top: 1px solid var(--border);
     flex-shrink: 0;
     max-height: none;
+    overflow-x: hidden;
   }
 
   .exam-palette-toggle {
     display: flex;
+    min-width: 0;
   }
 
   .exam-palette-collapsible:not([open]) .exam-palette-body {
@@ -6239,6 +6320,13 @@ img {
 
   .exam-palette-collapsible[open] .exam-palette-body {
     max-height: min(38vh, 280px);
+    overflow: hidden;
+  }
+
+  .exam-palette-collapsible[open] .exam-palette-grid {
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .exam-palette-grid {
@@ -6251,10 +6339,20 @@ img {
     font-size: 0.72rem;
     border-radius: 4px;
     min-height: 30px;
+    min-width: 0;
+    padding: 0;
   }
 
   .exam-palette-head h3 {
     display: none;
+  }
+
+  .exam-palette-head {
+    min-width: 0;
+  }
+
+  .exam-palette-legend {
+    min-width: 0;
   }
 
   .exam-start-meta {
@@ -6263,17 +6361,20 @@ img {
 }
 
 @media (min-width: 901px) {
-  .exam-palette-collapsible {
+  .exam-palette-shell {
+    flex: 1 1 0;
+    min-height: 0;
     height: 100%;
   }
 
-  .exam-palette-toggle {
-    display: none;
+  .exam-palette-body {
+    flex: 1 1 0;
+    min-height: 0;
+    height: 100%;
   }
 
-  .exam-palette-body {
-    flex: 1;
-    min-height: 0;
+  .exam-palette-grid {
+    overflow-y: scroll;
   }
 }
 
@@ -6282,6 +6383,9 @@ img {
     padding: 0.35rem 0.65rem;
     gap: 0.35rem;
     align-items: stretch;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .exam-header-main {
@@ -6343,6 +6447,12 @@ img {
     padding-bottom: 0.5rem;
     margin-bottom: 0.65rem;
     border-bottom-width: 1px;
+    align-items: flex-start;
+  }
+
+  .exam-question-badges {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .exam-question-head h2 {
@@ -6392,9 +6502,14 @@ img {
     flex-shrink: 0;
   }
 
+  .exam-nav-row .icon-action-btn--labeled {
+    min-width: 0;
+  }
+
   .exam-integer-input {
     padding: 0.55rem 0.65rem;
     font-size: 0.9rem;
+    max-width: 100%;
   }
 
   .exam-nav-row {
@@ -6487,6 +6602,7 @@ img {
   .exam-cbt-main {
     margin: 0.45rem 0.45rem 0;
     border-radius: 8px;
+    max-width: calc(100% - 0.9rem);
   }
 
   .exam-cbt-col {
@@ -6551,13 +6667,36 @@ img {
     padding: 0.7rem 1rem;
     font-size: 0.88rem;
   }
+
+  .exam-cbt-meta {
+    gap: 0.35rem;
+  }
+
+  .exam-cbt-meta li {
+    padding: 0.35rem 0.45rem;
+    border-right: none;
+    border: 1px solid #dce3df;
+    border-radius: 6px;
+  }
+}
+
+@media (max-width: 380px) {
+  .exam-palette-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .exam-header-meta {
+    white-space: normal;
+  }
 }
 
 .teacher-preview-shell {
   position: fixed;
   inset: 0;
   z-index: 200;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-width: 100vw;
 }
 
 .admin-root:has(.teacher-preview-shell) {
@@ -6583,7 +6722,9 @@ img {
 
 .exam-root:has(.exam-cbt) {
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
+  max-width: 100%;
 }
 
 .exam-root--preview:has(.exam-cbt) {
@@ -6603,6 +6744,8 @@ img {
   min-height: 0;
   background: #f4f7f5;
   color: var(--text);
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .exam-cbt-header {
@@ -6681,6 +6824,8 @@ img {
   border-radius: 10px;
   overflow: hidden;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  max-width: calc(100% - 2.5rem);
+  min-width: 0;
 }
 
 .exam-cbt-col {
@@ -7064,7 +7209,8 @@ img {
 
   .exam-cbt-main {
     grid-template-columns: 1fr;
-    margin-top: 0.75rem;
+    margin: 0.75rem 0.75rem 0;
+    max-width: calc(100% - 1.5rem);
   }
 
   .exam-cbt-col:first-child {

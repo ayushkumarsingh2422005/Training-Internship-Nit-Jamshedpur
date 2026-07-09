@@ -89,6 +89,7 @@ export function ExamEngine({
   const [fullscreenError, setFullscreenError] = useState<string | null>(null);
   const [isCompactUi, setIsCompactUi] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const autostartTriggeredRef = useRef(false);
 
   const startBtnRef = useRef<HTMLButtonElement>(null);
@@ -1000,6 +1001,55 @@ export function ExamEngine({
   const proctorWarning = getProctorWarningMessage(proctorStats.tabSwitches, proctorStats.focusLosses);
   const submitSummary = showSubmitConfirmModal ? getSubmitSummary() : null;
 
+  const paletteContent = (
+    <>
+      <div className="exam-palette-head">
+        <h3>Question palette</h3>
+        <div className="exam-palette-legend">
+          <span>
+            <span className="exam-palette-dot exam-palette-dot--answered" aria-hidden />
+            Answered
+          </span>
+          <span>
+            <span className="exam-palette-dot exam-palette-dot--unanswered" aria-hidden />
+            Unanswered
+          </span>
+          {hasPerQuestionTimers ? (
+            <span>
+              <span className="exam-palette-dot exam-palette-dot--expired" aria-hidden />
+              Time expired
+            </span>
+          ) : null}
+          <span>
+            <span className="exam-palette-dot exam-palette-dot--review" aria-hidden />
+            Marked
+          </span>
+        </div>
+      </div>
+      <div className="exam-palette-grid">
+        {questions.map((q, idx) => {
+          const isAnswered = isQuestionAnswered(q._id);
+          const isMarked = markedForReview.has(q._id);
+          const isExpired =
+            hasPerQuestionTimers &&
+            isQuestionTimeExpired(q.timeLimitSeconds, questionTimings, q._id);
+          return (
+            <button
+              key={q._id}
+              type="button"
+              onClick={() => !isExpired && goToQuestion(idx)}
+              disabled={isExpired}
+              title={isExpired ? "Time for this question has expired" : undefined}
+              className={`exam-palette-btn${isAnswered ? " exam-palette-btn--answered" : ""}${isMarked ? " exam-palette-btn--review" : ""}${currentQIndex === idx ? " exam-palette-btn--current" : ""}${isExpired ? " exam-palette-btn--expired" : ""}`}
+            >
+              {idx + 1}
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+
   if (loading) {
     return (
       <div className="exam-loading">
@@ -1310,60 +1360,25 @@ export function ExamEngine({
             </div>
 
             <aside className="exam-palette">
-              <details className="exam-palette-collapsible">
-                <summary className="exam-palette-toggle">
-                  <span>Question palette</span>
-                  <span className="exam-palette-toggle-meta">
-                    {answeredCount}/{questions.length} answered · Q{currentQIndex + 1}
-                  </span>
-                </summary>
-                <div className="exam-palette-body">
-                  <div className="exam-palette-head">
-                    <h3>Question palette</h3>
-                    <div className="exam-palette-legend">
-                      <span>
-                        <span className="exam-palette-dot exam-palette-dot--answered" aria-hidden />
-                        Answered
-                      </span>
-                      <span>
-                        <span className="exam-palette-dot exam-palette-dot--unanswered" aria-hidden />
-                        Unanswered
-                      </span>
-                      {hasPerQuestionTimers ? (
-                        <span>
-                          <span className="exam-palette-dot exam-palette-dot--expired" aria-hidden />
-                          Time expired
-                        </span>
-                      ) : null}
-                      <span>
-                        <span className="exam-palette-dot exam-palette-dot--review" aria-hidden />
-                        Marked
-                      </span>
-                    </div>
-                  </div>
-                  <div className="exam-palette-grid">
-                    {questions.map((q, idx) => {
-                      const isAnswered = isQuestionAnswered(q._id);
-                      const isMarked = markedForReview.has(q._id);
-                      const isExpired =
-                        hasPerQuestionTimers &&
-                        isQuestionTimeExpired(q.timeLimitSeconds, questionTimings, q._id);
-                      return (
-                        <button
-                          key={q._id}
-                          type="button"
-                          onClick={() => !isExpired && goToQuestion(idx)}
-                          disabled={isExpired}
-                          title={isExpired ? "Time for this question has expired" : undefined}
-                          className={`exam-palette-btn${isAnswered ? " exam-palette-btn--answered" : ""}${isMarked ? " exam-palette-btn--review" : ""}${currentQIndex === idx ? " exam-palette-btn--current" : ""}${isExpired ? " exam-palette-btn--expired" : ""}`}
-                        >
-                          {idx + 1}
-                        </button>
-                      );
-                    })}
-                  </div>
+              {showCompactUi ? (
+                <details
+                  className="exam-palette-collapsible"
+                  open={paletteOpen}
+                  onToggle={(e) => setPaletteOpen(e.currentTarget.open)}
+                >
+                  <summary className="exam-palette-toggle">
+                    <span>Question palette</span>
+                    <span className="exam-palette-toggle-meta">
+                      {answeredCount}/{questions.length} answered · Q{currentQIndex + 1}
+                    </span>
+                  </summary>
+                  <div className="exam-palette-body">{paletteContent}</div>
+                </details>
+              ) : (
+                <div className="exam-palette-shell">
+                  <div className="exam-palette-body">{paletteContent}</div>
                 </div>
-              </details>
+              )}
             </aside>
           </div>
         </>
