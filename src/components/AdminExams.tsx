@@ -3,8 +3,6 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { IconActionButton, IconActionGroup } from "@/components/IconActionButton";
 import { AdminExamEditor } from "@/components/AdminExamEditor";
-import { isProctorFlagged } from "@/lib/exam-utils";
-
 type AdminExamRow = {
   _id: string;
   testName: string;
@@ -256,9 +254,8 @@ export function AdminExams() {
                       </td>
                     </tr>
                     {expanded ? (
-                      <tr>
-                        <td colSpan={8} className="teacher-expanded-cell">
-                          <div className="teacher-expanded-panel">
+                      <tr className="admin-detail-row">
+                        <td colSpan={8}>
                             <h4 className="admin-subhead">Live attempts ({live.length})</h4>
                             {live.length === 0 ? (
                               <p className="admin-muted">No students currently in progress.</p>
@@ -346,7 +343,6 @@ export function AdminExams() {
                                 </table>
                               </div>
                             )}
-                          </div>
                         </td>
                       </tr>
                     ) : null}

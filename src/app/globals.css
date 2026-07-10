@@ -2901,8 +2901,21 @@ img {
   width: min(760px, calc(100vw - 24px));
 }
 
-.admin-modal-wide {
+.admin-modal-wide,
+.admin-modal-lg {
   width: min(1100px, calc(100vw - 24px));
+}
+
+.admin-modal-backdrop--nested {
+  z-index: 850;
+}
+
+.admin-exams-hint {
+  margin: 0 0 14px;
+}
+
+.admin-exam-editor {
+  max-height: min(92vh, 960px);
 }
 
 .admin-modal-header {
