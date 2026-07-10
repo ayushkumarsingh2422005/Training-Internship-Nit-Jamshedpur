@@ -4,6 +4,7 @@ import Test from "@/models/Test";
 import TestResult from "@/models/TestResult";
 import StudentTestAccess from "@/models/StudentTestAccess";
 import { getAdminSessionFromRequest } from "@/lib/admin-session";
+import { getTestWithQuestions, updateTestWithQuestions } from "@/lib/test-exam-service";
 
 export async function GET(req: Request) {
   const session = await getAdminSessionFromRequest(req, ["admin"]);
@@ -13,6 +14,23 @@ export async function GET(req: Request) {
 
   try {
     await connectDB();
+
+    const { searchParams } = new URL(req.url);
+    const testId = searchParams.get("id");
+
+    if (testId) {
+      const detail = await getTestWithQuestions(testId);
+      if (!detail) {
+        return NextResponse.json({ error: "Test not found." }, { status: 404 });
+      }
+      const teacher = await Test.findById(testId).populate("createdBy", "fullName email").lean();
+      const createdBy = teacher?.createdBy as { fullName?: string; email?: string } | null;
+      return NextResponse.json({
+        ...detail,
+        teacherName: createdBy?.fullName || "—",
+        teacherEmail: createdBy?.email || "—",
+      });
+    }
 
     const tests = await Test.find({})
       .populate("createdBy", "fullName email")
@@ -93,6 +111,62 @@ export async function GET(req: Request) {
     return NextResponse.json({ tests: overview, stats });
   } catch (error) {
     console.error("GET /api/admin/exams error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
+export async function PUT(req: Request) {
+  const session = await getAdminSessionFromRequest(req, ["admin"]);
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    await connectDB();
+    const body = await req.json();
+    const { testId, ...payload } = body;
+    if (!testId) {
+      return NextResponse.json({ error: "Missing testId." }, { status: 400 });
+    }
+
+    const existing = await Test.findById(testId);
+    if (!existing) {
+      return NextResponse.json({ error: "Test not found." }, { status: 404 });
+    }
+
+    const result = await updateTestWithQuestions(testId, payload, existing.createdBy);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: result.status });
+    }
+
+    return NextResponse.json({ success: true, test: result.test });
+  } catch (error) {
+    console.error("PUT /api/admin/exams error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: Request) {
+  const session = await getAdminSessionFromRequest(req, ["admin"]);
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    await connectDB();
+    const { testId, status } = await req.json();
+    if (!testId || !status) {
+      return NextResponse.json({ error: "Missing testId or status." }, { status: 400 });
+    }
+
+    const test = await Test.findByIdAndUpdate(testId, { status }, { new: true });
+    if (!test) {
+      return NextResponse.json({ error: "Test not found." }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, test });
+  } catch (error) {
+    console.error("PATCH /api/admin/exams error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
