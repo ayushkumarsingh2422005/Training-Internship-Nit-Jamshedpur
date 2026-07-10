@@ -6,6 +6,7 @@ import { saveTeacherSession, getTeacherSession, clearTeacherSession, authHeaders
 import { useTopLoading } from "@/components/TopLoadingProvider";
 import { dateTimeLocalToISO, toDateTimeLocalValue } from "@/lib/datetime-local";
 import { saveDraftPreview } from "@/lib/teacher-exam-preview";
+import { parseCsvRows } from "@/lib/csv-parse";
 import { isProctorFlagged } from "@/lib/exam-utils";
 import { IconActionButton, IconActionGroup } from "@/components/IconActionButton";
 
@@ -518,32 +519,12 @@ export function TeacherDashboard() {
       if (!text) return;
 
       try {
-        const lines = text.split(/\r?\n/);
+        const rows = parseCsvRows(text);
         const parsed: any[] = [];
 
-        for (let i = 1; i < lines.length; i++) {
-          const line = lines[i].trim();
-          if (!line) continue;
-
-          // Simple CSV parsing to respect quoted fields
-          const row: string[] = [];
-          let insideQuote = false;
-          let current = "";
-
-          for (let c = 0; c < line.length; c++) {
-            const char = line[c];
-            if (char === '"') {
-              insideQuote = !insideQuote;
-            } else if (char === "," && !insideQuote) {
-              row.push(current.trim());
-              current = "";
-            } else {
-              current += char;
-            }
-          }
-          row.push(current.trim());
-
-          if (row.length < 2) continue;
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i].map((cell) => cell.trim());
+          if (row.length < 2 || row.every((cell) => !cell)) continue;
 
           const [
             qText,
