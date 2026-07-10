@@ -6,6 +6,7 @@ import Test from "@/models/Test";
 import Application from "@/models/Application";
 import StudentTestAccess from "@/models/StudentTestAccess";
 import { verifyStudentSessionToken } from "@/lib/student-session";
+import { modulesMatch } from "@/lib/module-match";
 
 async function getStudent() {
   const headersList = await headers();
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Test not available" }, { status: 404 });
     }
 
-    if (test.subject !== student.subject || test.subpart !== student.subpart) {
+    if (!modulesMatch(test, student)) {
       return NextResponse.json({ error: "You are not enrolled in this test's module" }, { status: 403 });
     }
 

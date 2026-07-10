@@ -7,6 +7,7 @@ import StudentTestAccess from "@/models/StudentTestAccess";
 import TestResult from "@/models/TestResult";
 import { verifyStudentSessionToken } from "@/lib/student-session";
 import { enrichStudentTest } from "@/lib/student-test-status";
+import { moduleQueryFilter } from "@/lib/module-match";
 
 async function getStudent() {
   const headersList = await headers();
@@ -27,8 +28,7 @@ export async function GET() {
 
   try {
     const tests = await Test.find({
-      subject: student.subject,
-      subpart: student.subpart,
+      ...moduleQueryFilter(student.subject, student.subpart),
       status: "Published",
     })
       .sort({ startDateTime: -1 })
