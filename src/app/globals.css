@@ -6285,13 +6285,21 @@ img {
 }
 
 @media (max-width: 900px) {
+  .exam-root--mobile-exam {
+    --exam-mobile-nav-h: calc(3.65rem + env(safe-area-inset-bottom, 0px));
+  }
+
   .exam-root--mobile-exam .exam-main {
     padding: 0.65rem;
-    padding-bottom: calc(4.85rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(var(--exam-mobile-nav-h) + 0.85rem);
     flex: 1 1 0;
     min-height: 0;
     overflow-x: hidden;
     overflow-y: auto;
+  }
+
+  .exam-root--mobile-exam.exam-root--palette-open .exam-main {
+    padding-bottom: calc(var(--exam-mobile-nav-h) + min(42vh, 280px) + 1rem);
   }
 
   .exam-root--mobile-exam .exam-nav-row--mobile {
@@ -6344,8 +6352,8 @@ img {
     position: fixed;
     left: 0;
     right: 0;
-    bottom: calc(4.15rem + env(safe-area-inset-bottom, 0px));
-    z-index: 115;
+    bottom: var(--exam-mobile-nav-h);
+    z-index: 125;
     width: 100%;
     max-width: 100%;
     min-width: 0;
@@ -6360,7 +6368,7 @@ img {
     background: #fff;
     border-top: 1px solid var(--border);
     box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.12);
-    max-height: min(46vh, 340px);
+    max-height: min(42vh, 280px);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -6385,16 +6393,42 @@ img {
 
   .exam-root--mobile-exam .exam-palette-mobile-panel .exam-palette-body {
     min-height: 0;
-    max-height: min(46vh, 340px);
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   .exam-root--mobile-exam .exam-palette-mobile-panel .exam-palette-grid {
     min-height: 0;
+    flex: 1 1 auto;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .exam-root--mobile-exam .exam-palette-mobile-panel .exam-palette-head {
+    padding: 0.45rem 0.65rem 0.35rem;
+    margin: 0;
+    flex-shrink: 0;
+  }
+
+  .exam-root--mobile-exam .exam-palette-mobile-panel .exam-palette-head h3 {
+    font-size: 0.78rem;
+    margin: 0;
+  }
+
+  .exam-root--mobile-exam .exam-palette-mobile-panel .exam-palette-legend {
+    font-size: 0.58rem;
+    gap: 0.2rem 0.35rem;
+    margin-top: 0.25rem;
   }
 
   .exam-root--ui-update.exam-root--mobile-exam .exam-nav-row--mobile {
     bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .exam-root--ui-update.exam-root--mobile-exam {
+    --exam-mobile-nav-h: calc(4.75rem + env(safe-area-inset-bottom, 0px));
   }
 
   .exam-root--ui-update.exam-root--mobile-exam .exam-palette--mobile {
@@ -6540,21 +6574,23 @@ img {
     min-width: 0;
     height: auto;
     min-height: 34px;
-    padding: 0.28rem 0.55rem;
+    padding: 0.35rem 0.65rem;
     flex: 0 0 auto;
-    flex-direction: column;
-    gap: 0.08rem;
+    flex-direction: row;
+    gap: 0.35rem;
   }
 
   .exam-header-actions .exam-finish-btn-like.icon-action-btn--sm svg {
     width: 14px;
     height: 14px;
+    flex-shrink: 0;
   }
 
   .exam-header-actions .exam-finish-btn-like .icon-action-btn__label {
-    font-size: 0.58rem;
+    font-size: 0.72rem;
     font-weight: 700;
     line-height: 1;
+    white-space: nowrap;
   }
 
   .exam-proctor-warning {

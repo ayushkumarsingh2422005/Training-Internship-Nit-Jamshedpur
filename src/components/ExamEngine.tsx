@@ -1148,7 +1148,7 @@ export function ExamEngine({
 
   return (
     <div
-      className={`exam-root${isExamActive ? " exam-root--active" : ""}${isPreview ? " exam-root--preview" : ""}${uiUpdateAvailable ? " exam-root--ui-update" : ""}${showCompactUi && isExamActive ? " exam-root--mobile-exam" : ""}`}
+      className={`exam-root${isExamActive ? " exam-root--active" : ""}${isPreview ? " exam-root--preview" : ""}${uiUpdateAvailable ? " exam-root--ui-update" : ""}${showCompactUi && isExamActive ? " exam-root--mobile-exam" : ""}${showCompactUi && paletteOpen ? " exam-root--palette-open" : ""}`}
     >
       {isPreview ? (
         <div className="exam-preview-banner" role="status">
