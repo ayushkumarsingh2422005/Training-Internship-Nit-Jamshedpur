@@ -3,6 +3,7 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { IconActionButton, IconActionGroup } from "@/components/IconActionButton";
 import { AdminExamEditor } from "@/components/AdminExamEditor";
+import { AdminManualExams } from "@/components/AdminManualExams";
 type AdminExamRow = {
   _id: string;
   testName: string;
@@ -37,6 +38,7 @@ export function AdminExams() {
   const [liveAttempts, setLiveAttempts] = useState<Record<string, any[]>>({});
   const [testResults, setTestResults] = useState<Record<string, any[]>>({});
   const [editingTestId, setEditingTestId] = useState<string | null>(null);
+  const [section, setSection] = useState<"cbt" | "manual">("cbt");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -132,11 +134,32 @@ export function AdminExams() {
     }
   }
 
-  if (loading) return <p className="admin-loading">Loading examinations…</p>;
-  if (error) return <p className="admin-error">{error}</p>;
-
   return (
     <div className="admin-exams-panel">
+      <div className="admin-section-switcher">
+        <button
+          type="button"
+          className={`btn btn-sm ${section === "cbt" ? "btn-green" : "btn-secondary"}`}
+          onClick={() => setSection("cbt")}
+        >
+          CBT exams
+        </button>
+        <button
+          type="button"
+          className={`btn btn-sm ${section === "manual" ? "btn-green" : "btn-secondary"}`}
+          onClick={() => setSection("manual")}
+        >
+          Manual results
+        </button>
+      </div>
+
+      {section === "manual" ? <AdminManualExams /> : null}
+
+      {section === "cbt" && loading ? <p className="admin-loading">Loading examinations…</p> : null}
+      {section === "cbt" && error ? <p className="admin-error">{error}</p> : null}
+
+      {section === "cbt" && !loading && !error ? (
+        <>
       <p className="admin-muted admin-exams-hint">
         Admin can <strong>view, track, and edit</strong> all examinations. Creating new exams remains with teachers only.
       </p>
@@ -360,6 +383,8 @@ export function AdminExams() {
           onClose={() => setEditingTestId(null)}
           onSaved={() => void load()}
         />
+      ) : null}
+        </>
       ) : null}
     </div>
   );

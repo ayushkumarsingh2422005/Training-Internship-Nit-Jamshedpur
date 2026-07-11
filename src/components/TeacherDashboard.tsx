@@ -9,6 +9,7 @@ import { saveDraftPreview } from "@/lib/teacher-exam-preview";
 import { parseCsvRows } from "@/lib/csv-parse";
 import { isProctorFlagged } from "@/lib/exam-utils";
 import { IconActionButton, IconActionGroup } from "@/components/IconActionButton";
+import { TeacherManualResults } from "@/components/TeacherManualResults";
 
 function statusBadgeClass(status: string) {
   return status === "Published" ? "teacher-badge teacher-badge-published" : "teacher-badge teacher-badge-draft";
@@ -63,6 +64,7 @@ export function TeacherDashboard() {
   const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
 
   // Test creation states
+  const [dashboardSection, setDashboardSection] = useState<"tests" | "create" | "manual">("tests");
   const [isCreatingTest, setIsCreatingTest] = useState(false);
   const [editingTestId, setEditingTestId] = useState<string | null>(null);
   const [testForm, setTestForm] = useState({
@@ -407,6 +409,7 @@ export function TeacherDashboard() {
       setFormQuestions(data.questions || []);
       setEditingTestId(testId);
       setIsCreatingTest(true);
+      setDashboardSection("create");
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : "Failed to load test.");
     } finally {
@@ -700,6 +703,7 @@ export function TeacherDashboard() {
 
       alert(editingTestId ? "Test updated successfully!" : "Test created and assigned successfully!");
       setIsCreatingTest(false);
+      setDashboardSection("tests");
       resetTestForm();
       fetchData();
     } catch (err: any) {
@@ -722,7 +726,8 @@ export function TeacherDashboard() {
         <div>
           <h1>Examinations dashboard</h1>
           <p>
-            {teacher.fullName} — create tests, publish schedules, and review submissions for your assigned modules.
+            {teacher.fullName} — create CBT tests, enter offline theory/lab marks, and review submissions for your
+            assigned modules.
           </p>
         </div>
         <div className="admin-topbar-actions">
@@ -764,26 +769,51 @@ export function TeacherDashboard() {
       <div className="admin-section-switcher">
         <button
           type="button"
-          className={`btn btn-sm ${!isCreatingTest ? "btn-green" : "btn-secondary"}`}
-          onClick={() => { setIsCreatingTest(false); resetTestForm(); }}
+          className={`btn btn-sm ${dashboardSection === "tests" ? "btn-green" : "btn-secondary"}`}
+          onClick={() => {
+            setDashboardSection("tests");
+            setIsCreatingTest(false);
+            resetTestForm();
+          }}
         >
           My tests
         </button>
         <button
           type="button"
-          className={`btn btn-sm ${isCreatingTest ? "btn-green" : "btn-secondary"}`}
-          onClick={() => { resetTestForm(); setIsCreatingTest(true); }}
+          className={`btn btn-sm ${dashboardSection === "create" ? "btn-green" : "btn-secondary"}`}
+          onClick={() => {
+            resetTestForm();
+            setIsCreatingTest(true);
+            setDashboardSection("create");
+          }}
         >
           {editingTestId ? "Edit test" : "Create test"}
+        </button>
+        <button
+          type="button"
+          className={`btn btn-sm ${dashboardSection === "manual" ? "btn-green" : "btn-secondary"}`}
+          onClick={() => {
+            setDashboardSection("manual");
+            setIsCreatingTest(false);
+            resetTestForm();
+          }}
+        >
+          Manual results
         </button>
       </div>
 
       {error ? <p className="admin-error">{error}</p> : null}
 
-      {!isCreatingTest ? (
-        <>
+      {dashboardSection === "manual" ? (
+        <div className="teacher-section-panel">
+          <TeacherManualResults teacher={teacher} />
+        </div>
+      ) : null}
+
+      {dashboardSection === "tests" ? (
+        <div className="teacher-section-panel">
           <div className="admin-application-toolbar">
-            <button type="button" className="btn btn-green btn-sm" onClick={() => { resetTestForm(); setIsCreatingTest(true); }}>
+            <button type="button" className="btn btn-green btn-sm" onClick={() => { resetTestForm(); setIsCreatingTest(true); setDashboardSection("create"); }}>
               + New examination
             </button>
           </div>
@@ -985,8 +1015,9 @@ export function TeacherDashboard() {
               </table>
             </div>
           )}
-        </>
-      ) : (
+        </div>
+      ) : dashboardSection === "create" ? (
+        <div className="teacher-section-panel">
         <div className="admin-filters">
           <h2 className="admin-subhead">{editingTestId ? "Edit examination" : "Create examination"}</h2>
           <div className="admin-form-grid-two">
@@ -1075,7 +1106,7 @@ export function TeacherDashboard() {
             </div>
           )}
           <div className="admin-filters-actions">
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setIsCreatingTest(false); resetTestForm(); }}>Cancel</button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setIsCreatingTest(false); setDashboardSection("tests"); resetTestForm(); }}>Cancel</button>
             <button
               type="button"
               className="btn btn-outline-admin btn-sm"
@@ -1088,7 +1119,8 @@ export function TeacherDashboard() {
             <button type="button" className="btn btn-green btn-sm" onClick={handleSaveTest} disabled={loading}>{editingTestId ? "Update test" : "Save test"}</button>
           </div>
         </div>
-      )}
+        </div>
+      ) : null}
 
       {showQuestionModal && (
         <div className="admin-modal-backdrop" onClick={closeQuestionModal}>

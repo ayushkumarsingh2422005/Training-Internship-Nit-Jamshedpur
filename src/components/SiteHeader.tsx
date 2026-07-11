@@ -51,11 +51,11 @@ export function SiteHeader() {
                   </a>
                 </div>
               </div>
-              <Link href="/notices" className="btn-pill btn-pill-blue">
-                Notices
+              <Link href="/student-portal" className="btn-pill btn-pill-blue">
+                Results
               </Link>
               <Link href={`${studentPortalPath}#check-shortlist`} className="btn-pill btn-pill-green">
-                Login & Profile
+                Student Login
               </Link>
             </div>
           </div>

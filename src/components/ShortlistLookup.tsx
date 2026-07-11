@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { StudentAttendancePanel } from "@/components/StudentAttendancePanel";
 import { StudentCourseFeedbackPanel } from "@/components/StudentCourseFeedbackPanel";
-import { StudentApplicationRequestPanel } from "@/components/StudentApplicationRequestPanel";
-import { StudentExamsPanel } from "@/components/StudentExamsPanel";
+import { StudentResultsPanel } from "@/components/StudentResultsPanel";
 import {
   authHeaders,
   clearStudentSession,
@@ -22,7 +21,7 @@ type LookupState =
   | { status: "not-shortlisted" }
   | { status: "error"; message: string };
 
-type ProfileTab = "info" | "attendance" | "feedback" | "application-request" | "certificate" | "exams";
+type ProfileTab = "info" | "attendance" | "feedback" | "certificate" | "results";
 
 export function ShortlistLookup() {
   const [email, setEmail] = useState("");
@@ -258,15 +257,6 @@ export function ShortlistLookup() {
               <button
                 type="button"
                 role="tab"
-                aria-selected={activeTab === "application-request"}
-                className={`profile-tab${activeTab === "application-request" ? " active" : ""}`}
-                onClick={() => setActiveTab("application-request")}
-              >
-                Application Request
-              </button>
-              <button
-                type="button"
-                role="tab"
                 aria-selected={activeTab === "certificate"}
                 className={`profile-tab${activeTab === "certificate" ? " active" : ""}`}
                 onClick={() => setActiveTab("certificate")}
@@ -276,11 +266,11 @@ export function ShortlistLookup() {
               <button
                 type="button"
                 role="tab"
-                aria-selected={activeTab === "exams"}
-                className={`profile-tab${activeTab === "exams" ? " active" : ""}`}
-                onClick={() => setActiveTab("exams")}
+                aria-selected={activeTab === "results"}
+                className={`profile-tab${activeTab === "results" ? " active" : ""}`}
+                onClick={() => setActiveTab("results")}
               >
-                Exams
+                Results
               </button>
             </div>
 
@@ -310,8 +300,6 @@ export function ShortlistLookup() {
 
               {activeTab === "feedback" ? <StudentCourseFeedbackPanel /> : null}
 
-              {activeTab === "application-request" ? <StudentApplicationRequestPanel /> : null}
-
               {activeTab === "certificate" ? (
                 <div className="profile-result-placeholder">
                   <h4>Certificate section will be available here</h4>
@@ -319,7 +307,7 @@ export function ShortlistLookup() {
                 </div>
               ) : null}
 
-              {activeTab === "exams" ? <StudentExamsPanel /> : null}
+              {activeTab === "results" ? <StudentResultsPanel application={state.application} /> : null}
             </div>
           </div>
         ) : null}

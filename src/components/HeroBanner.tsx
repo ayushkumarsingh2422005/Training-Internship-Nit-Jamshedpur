@@ -24,11 +24,11 @@ export function HeroBanner() {
             <li>Official certification by NIT Jamshedpur upon successful completion</li>
           </ul>
           <div className="hero-actions">
-            <Link href="/notices" className="btn btn-yellow">
-              View Notices
+            <Link href="/student-portal" className="btn btn-yellow">
+              View Results
             </Link>
             <Link href={`${studentPortalPath}#check-shortlist`} className="btn btn-outline">
-              Login &amp; Profile
+              Student Login
             </Link>
           </div>
         </div>

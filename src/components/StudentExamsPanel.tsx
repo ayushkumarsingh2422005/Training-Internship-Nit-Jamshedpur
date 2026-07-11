@@ -15,6 +15,14 @@ function formatExamDateTime(value: string | Date) {
   });
 }
 
+function formatExamDate(value: string | Date) {
+  return new Date(value).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 function formatTimeRemaining(end: Date, now = new Date()) {
   const ms = end.getTime() - now.getTime();
   if (ms <= 0) return null;
@@ -44,12 +52,32 @@ function attemptBadgeTone(label: string) {
   }
 }
 
+type ManualResultItem = {
+  id: string;
+  score: number;
+  remarks: string;
+  updatedAt: string;
+  exam: {
+    id: string;
+    examName: string;
+    subject: string;
+    subpart: string;
+    examType: string;
+    maxMarks: number;
+    examDate?: string | null;
+    notes?: string;
+  };
+};
+
 export function StudentExamsPanel() {
   const [tests, setTests] = useState<StudentTestListItem[]>([]);
+  const [manualResults, setManualResults] = useState<ManualResultItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [activeCategory, setActiveCategory] = useState<"ongoing" | "upcoming" | "completed">("ongoing");
+  const [activeCategory, setActiveCategory] = useState<"ongoing" | "upcoming" | "completed" | "manual">(
+    "ongoing",
+  );
   const [isMobile, setIsMobile] = useState(false);
   const initialTabSet = useRef(false);
 
@@ -57,10 +85,16 @@ export function StudentExamsPanel() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/student/tests", { headers: authHeaders() });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load tests.");
-      setTests(data.tests || []);
+      const [testsRes, manualRes] = await Promise.all([
+        fetch("/api/student/tests", { headers: authHeaders() }),
+        fetch("/api/student/manual-results", { headers: authHeaders() }),
+      ]);
+      const testsData = await testsRes.json();
+      const manualData = await manualRes.json();
+      if (!testsRes.ok) throw new Error(testsData.error || "Failed to load tests.");
+      if (!manualRes.ok) throw new Error(manualData.error || "Failed to load entered results.");
+      setTests(testsData.tests || []);
+      setManualResults(manualData.results || []);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load tests.");
     } finally {
@@ -80,17 +114,20 @@ export function StudentExamsPanel() {
   }, [fetchTests]);
 
   useEffect(() => {
-    if (loading || initialTabSet.current || tests.length === 0) return;
+    if (loading || initialTabSet.current) return;
+    if (tests.length === 0 && manualResults.length === 0) return;
 
     const ongoing = tests.filter((t) => t.scheduleCategory === "ongoing");
     const upcoming = tests.filter((t) => t.scheduleCategory === "upcoming");
 
     if (ongoing.length > 0) setActiveCategory("ongoing");
     else if (upcoming.length > 0) setActiveCategory("upcoming");
+    else if (tests.some((t) => t.scheduleCategory === "completed")) setActiveCategory("completed");
+    else if (manualResults.length > 0) setActiveCategory("manual");
     else setActiveCategory("completed");
 
     initialTabSet.current = true;
-  }, [loading, tests]);
+  }, [loading, tests, manualResults]);
 
   async function startTest(testId: string) {
     setActionError(null);
@@ -253,13 +290,49 @@ export function StudentExamsPanel() {
     );
   }
 
+  function renderManualCard(item: ManualResultItem) {
+    return (
+      <article key={item.id} className="student-exam-card student-exam-card--completed">
+        <div className="student-exam-card-topbar">
+          <p className="student-exam-card-eyebrow">
+            {item.exam.subject}
+            {item.exam.subpart ? ` · ${item.exam.subpart}` : ""}
+          </p>
+          <div className="student-exam-card-badges">
+            <span className="student-exam-badge student-exam-badge--completed">{item.exam.examType}</span>
+            <span className="student-exam-badge student-exam-badge--submitted">Entered mark</span>
+          </div>
+        </div>
+
+        <h5 className="student-exam-card-title">{item.exam.examName}</h5>
+
+        <p className="student-exam-card-meta">
+          <span>{item.exam.maxMarks} marks</span>
+          <span className="student-exam-meta-score">
+            Score {item.score}/{item.exam.maxMarks}
+          </span>
+        </p>
+
+        {item.exam.examDate ? (
+          <p className="student-exam-card-window">
+            <span className="student-exam-card-window-label">Exam date</span>
+            {formatExamDate(item.exam.examDate)}
+          </p>
+        ) : null}
+
+        {item.remarks ? <p className="student-exam-card-note">{item.remarks}</p> : null}
+      </article>
+    );
+  }
+
   const tabs = [
     { id: "ongoing" as const, label: "Ongoing / Live", count: ongoing.length, tone: "ongoing" },
     { id: "upcoming" as const, label: "Upcoming", count: upcoming.length, tone: "upcoming" },
     { id: "completed" as const, label: "Completed", count: completed.length, tone: "completed" },
+    { id: "manual" as const, label: "Entered marks", count: manualResults.length, tone: "completed" },
   ];
 
-  const activeList =
+  const cbtList =
     activeCategory === "ongoing" ? ongoing : activeCategory === "upcoming" ? upcoming : completed;
 
   return (
@@ -292,10 +365,16 @@ export function StudentExamsPanel() {
         </nav>
 
         <div className="student-exams-content">
-          {activeList.length === 0 ? (
+          {activeCategory === "manual" ? (
+            manualResults.length === 0 ? (
+              <p className="admin-muted">No entered theory/lab marks yet.</p>
+            ) : (
+              <div className="student-exams-list">{manualResults.map((item) => renderManualCard(item))}</div>
+            )
+          ) : cbtList.length === 0 ? (
             <p className="admin-muted">No exams in this category.</p>
           ) : (
-            <div className="student-exams-list">{activeList.map((test) => renderTestCard(test))}</div>
+            <div className="student-exams-list">{cbtList.map((test) => renderTestCard(test))}</div>
           )}
         </div>
       </div>
