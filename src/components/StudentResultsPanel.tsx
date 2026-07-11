@@ -135,7 +135,7 @@ export function StudentResultsPanel({ application }: StudentResultsPanelProps) {
           <h4>My results</h4>
           <p className="student-results-lead">All CBT and entered theory/lab marks in one place.</p>
         </div>
-        <div className="student-results-head-actions">
+        {/* <div className="student-results-head-actions">
           {results.length > 0 && summary ? (
             <button
               type="button"
@@ -168,7 +168,7 @@ export function StudentResultsPanel({ application }: StudentResultsPanelProps) {
             size="sm"
             onClick={() => void fetchResults()}
           />
-        </div>
+        </div> */}
       </div>
 
       {pdfError ? <p className="admin-error">{pdfError}</p> : null}
@@ -286,7 +286,7 @@ export function StudentResultsPanel({ application }: StudentResultsPanelProps) {
             );
           })}
 
-          {summary && summary.examCount > 0 ? (
+          {/* {summary && summary.examCount > 0 ? (
             <div className="student-results-total-bar">
               <div>
                 <strong>Combined total</strong>
@@ -299,7 +299,7 @@ export function StudentResultsPanel({ application }: StudentResultsPanelProps) {
                 <span>overall</span>
               </div>
             </div>
-          ) : null}
+          ) : null} */}
         </div>
       )}
     </div>
