@@ -39,6 +39,7 @@ export function AdminExams() {
   const [testResults, setTestResults] = useState<Record<string, any[]>>({});
   const [editingTestId, setEditingTestId] = useState<string | null>(null);
   const [section, setSection] = useState<"cbt" | "manual">("cbt");
+  const [ministryExporting, setMinistryExporting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -116,6 +117,40 @@ export function AdminExams() {
     }
   }
 
+  async function downloadMinistryReport() {
+    setMinistryExporting(true);
+    try {
+      const res = await fetch("/api/admin/exams/ministry-report", { credentials: "include" });
+      if (!res.ok) {
+        let message = "Failed to download ministry report.";
+        try {
+          const data = (await res.json()) as { error?: string };
+          message = data.error ?? message;
+        } catch {
+          // non-JSON error body
+        }
+        alert(message);
+        return;
+      }
+
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition");
+      const match = disposition?.match(/filename="([^"]+)"/);
+      const filename =
+        match?.[1] ?? `ministry-exam-results-${new Date().toISOString().slice(0, 10)}.csv`;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Network error while downloading ministry report.");
+    } finally {
+      setMinistryExporting(false);
+    }
+  }
+
   async function handleTerminateAttempt(accessId: string, testId: string) {
     if (!confirm("Terminate this in-progress attempt?")) return;
     try {
@@ -136,6 +171,21 @@ export function AdminExams() {
 
   return (
     <div className="admin-exams-panel">
+      <div className="admin-exams-toolbar">
+        <p className="admin-muted admin-exams-toolbar-note">
+          Download a CSV for the Ministry of Education with basic student details and consolidated marks.
+          Only students who have at least one exam result (CBT or manual) are included.
+        </p>
+        <button
+          type="button"
+          className="btn btn-green btn-sm"
+          disabled={ministryExporting}
+          onClick={() => void downloadMinistryReport()}
+        >
+          {ministryExporting ? "Preparing…" : "Download ministry report (CSV)"}
+        </button>
+      </div>
+
       <div className="admin-section-switcher">
         <button
           type="button"
