@@ -11,6 +11,7 @@ type CertificateSheetProps = {
   nitLogoUrl: string;
   governmentLogoUrl: string;
   signatureUrl: string;
+  qrCodeUrl: string;
 };
 
 export function CertificateSheet({
@@ -20,6 +21,7 @@ export function CertificateSheet({
   nitLogoUrl,
   governmentLogoUrl,
   signatureUrl,
+  qrCodeUrl,
 }: CertificateSheetProps) {
   return (
     <article
@@ -65,6 +67,16 @@ export function CertificateSheet({
           <div className="certificate-sheet-date">
             <span>Certificate issuance date:</span>
             <strong>{issueDate}</strong>
+          </div>
+
+          <div className="certificate-sheet-qr">
+            {qrCodeUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={qrCodeUrl} alt="Scan to verify certificate" />
+            ) : (
+              <div className="certificate-sheet-qr-placeholder" aria-hidden="true" />
+            )}
+            <span>Scan to verify</span>
           </div>
 
           <div className="certificate-sheet-signatory">

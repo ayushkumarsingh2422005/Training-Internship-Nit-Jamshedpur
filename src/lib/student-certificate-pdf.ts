@@ -3,7 +3,6 @@ import { createRoot, type Root } from "react-dom/client";
 import { CertificateSheet } from "@/components/CertificateSheet";
 import {
   certificateFileName,
-  formatCertificateDate,
   type CertificateStudent,
 } from "@/lib/certificate-meta";
 import { signatureDataUrl } from "@/lib/id-card-assets";
@@ -49,17 +48,19 @@ async function renderCertificate(
   host: HTMLElement,
   root: Root,
   student: CertificateStudent,
+  options: CertificatePdfOptions,
 ): Promise<HTMLCanvasElement> {
   const signatureUrl = await signatureDataUrl(assetUrl("/signature.png"));
 
   root.render(
     createElement(CertificateSheet, {
       student,
-      issueDate: formatCertificateDate(new Date()),
+      issueDate: options.issueDate,
       backgroundUrl: assetUrl("/certificate_bg.png"),
       nitLogoUrl: assetUrl("/nitjsrlogo.png"),
       governmentLogoUrl: assetUrl("/Jharkhand_Rajakiya_Chihna.svg"),
       signatureUrl,
+      qrCodeUrl: options.qrCodeUrl,
     }),
   );
 
@@ -89,7 +90,15 @@ async function renderCertificate(
   });
 }
 
-export async function downloadStudentCertificatePdf(student: CertificateStudent): Promise<void> {
+type CertificatePdfOptions = {
+  issueDate: string;
+  qrCodeUrl: string;
+};
+
+export async function downloadStudentCertificatePdf(
+  student: CertificateStudent,
+  options: CertificatePdfOptions,
+): Promise<void> {
   if (!student.internId?.trim()) {
     throw new Error("Your Intern ID must be assigned before generating the certificate.");
   }
@@ -98,7 +107,7 @@ export async function downloadStudentCertificatePdf(student: CertificateStudent)
   const root = createRoot(host);
 
   try {
-    const canvas = await renderCertificate(host, root, student);
+    const canvas = await renderCertificate(host, root, student, options);
     const { jsPDF } = await import("jspdf");
     const pdf = new jsPDF({
       orientation: "landscape",

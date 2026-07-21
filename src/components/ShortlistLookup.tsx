@@ -302,7 +302,10 @@ export function ShortlistLookup() {
               {activeTab === "feedback" ? <StudentCourseFeedbackPanel /> : null}
 
               {activeTab === "certificate" ? (
-                <StudentCertificatePanel application={state.application} />
+                <StudentCertificatePanel
+                  application={state.application}
+                  onRequestFeedback={() => setActiveTab("feedback")}
+                />
               ) : null}
 
               {activeTab === "results" ? <StudentResultsPanel application={state.application} /> : null}
