@@ -5,6 +5,8 @@ import connectDB from "@/lib/mongodb";
 import Application from "@/models/Application";
 import Certificate from "@/models/Certificate";
 import CourseFeedback from "@/models/CourseFeedback";
+import ManualExamResult from "@/models/ManualExamResult";
+import TestResult from "@/models/TestResult";
 
 export async function GET(request: Request) {
   try {
@@ -39,6 +41,18 @@ export async function GET(request: Request) {
         eligible: false,
         requirement: "course-feedback",
         reason: "Please add a course review before viewing or downloading your certificate.",
+      });
+    }
+
+    const [hasCbtResult, hasManualResult] = await Promise.all([
+      TestResult.exists({ studentId: application._id }),
+      ManualExamResult.exists({ studentId: application._id }),
+    ]);
+    if (!hasCbtResult && !hasManualResult) {
+      return NextResponse.json({
+        eligible: false,
+        requirement: "exam-result",
+        reason: "You must complete at least one examination before viewing or downloading your certificate.",
       });
     }
 

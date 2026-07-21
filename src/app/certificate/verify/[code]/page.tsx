@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import connectDB from "@/lib/mongodb";
 import Certificate from "@/models/Certificate";
+import ManualExamResult from "@/models/ManualExamResult";
+import TestResult from "@/models/TestResult";
 
 export const metadata: Metadata = {
   title: "Verify Certificate",
@@ -24,13 +26,21 @@ export default async function VerifyCertificatePage({
 }) {
   const { code } = await params;
   let certificate = null;
+  let hasExamResult = false;
 
   if (/^[a-f0-9]{48}$/i.test(code)) {
     await connectDB();
     certificate = await Certificate.findOne({ verificationCode: code }).lean();
+    if (certificate) {
+      const [cbtResult, manualResult] = await Promise.all([
+        TestResult.exists({ studentId: certificate.applicationId }),
+        ManualExamResult.exists({ studentId: certificate.applicationId }),
+      ]);
+      hasExamResult = Boolean(cbtResult || manualResult);
+    }
   }
 
-  const valid = certificate?.status === "valid";
+  const valid = certificate?.status === "valid" && hasExamResult;
 
   return (
     <main className="page-main certificate-verification-page">

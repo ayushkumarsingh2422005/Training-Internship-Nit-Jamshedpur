@@ -24,7 +24,7 @@ type CertificateResponse =
   | { eligible: true; certificate: CertificateInfo }
   | {
       eligible: false;
-      requirement: "intern-id" | "course-feedback" | "certificate-valid";
+      requirement: "intern-id" | "course-feedback" | "exam-result" | "certificate-valid";
       reason: string;
     };
 
@@ -36,7 +36,7 @@ export function StudentCertificatePanel({
   const [checkingEligibility, setCheckingEligibility] = useState(true);
   const [certificate, setCertificate] = useState<CertificateInfo | null>(null);
   const [requirement, setRequirement] = useState<
-    "" | "intern-id" | "course-feedback" | "certificate-valid"
+    "" | "intern-id" | "course-feedback" | "exam-result" | "certificate-valid"
   >("");
   const [lockedReason, setLockedReason] = useState("");
   const [qrCodeUrl, setQrCodeUrl] = useState("");
