@@ -1,3 +1,297 @@
+.student-certificate-panel {
+  min-width: 0;
+}
+
+.student-certificate-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.student-certificate-toolbar h4,
+.student-certificate-toolbar p {
+  margin: 0;
+}
+
+.student-certificate-toolbar p {
+  margin-top: 4px;
+  color: #5f6b76;
+}
+
+.student-certificate-alert {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid #e2c46c;
+  border-radius: 7px;
+  background: #fff9e8;
+  color: #6b5314;
+}
+
+.student-certificate-alert--error {
+  border-color: #efb3b3;
+  background: #fff1f1;
+  color: #9b1c1c;
+}
+
+.student-certificate-preview {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid #d8dee4;
+  border-radius: 8px;
+  background: #edf1f3;
+  box-shadow: inset 0 0 18px rgba(15, 23, 42, 0.08);
+}
+
+.student-certificate-preview-stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1024px;
+  height: 724px;
+  transform-origin: top left;
+}
+
+.certificate-sheet {
+  position: relative;
+  isolation: isolate;
+  width: 1024px;
+  min-width: 1024px;
+  max-width: none;
+  height: 724px;
+  min-height: 724px;
+  max-height: 724px;
+  overflow: hidden;
+  background: #fff;
+  color: #111;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.certificate-sheet-bg {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+.certificate-sheet-content {
+  position: absolute;
+  inset: 0;
+}
+
+.certificate-sheet-header {
+  position: absolute;
+  top: 108px;
+  left: 245px;
+  right: 245px;
+  text-align: center;
+}
+
+.certificate-sheet-header h1 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 66px;
+  font-weight: 500;
+  line-height: 0.92;
+  letter-spacing: 2px;
+}
+
+.certificate-sheet-header p {
+  margin: 14px 0 0;
+  color: #b8872f;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 31px;
+  line-height: 1;
+  letter-spacing: 5px;
+}
+
+.certificate-sheet-logo {
+  position: absolute;
+  top: 196px;
+  left: 82px;
+  display: grid;
+  place-items: center;
+  width: 158px;
+  height: 172px;
+}
+
+.certificate-sheet-logo img {
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+}
+
+.certificate-sheet-logo--government {
+  right: 82px;
+  left: auto;
+}
+
+.certificate-sheet-logo--government img {
+  width: 156px;
+  height: 156px;
+}
+
+.certificate-sheet-recipient {
+  position: absolute;
+  top: 242px;
+  left: 255px;
+  right: 255px;
+  text-align: center;
+}
+
+.certificate-sheet-certify {
+  margin: 0;
+  font-size: 18px;
+}
+
+.certificate-sheet-number {
+  margin: 4px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  letter-spacing: 0.5px;
+}
+
+.certificate-sheet-name-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 16px;
+  align-items: end;
+  gap: 10px;
+  margin: 22px auto 0;
+  color: #d2a139;
+}
+
+.certificate-sheet-name-row strong {
+  min-width: 0;
+  padding: 0 10px 5px;
+  overflow: hidden;
+  border-bottom: 2px solid #d2a139;
+  color: #111;
+  font-family: "Segoe Script", "Brush Script MT", cursive;
+  font-size: 48px;
+  font-weight: 400;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.certificate-sheet-name-row span {
+  padding-bottom: 10px;
+  font-size: 14px;
+}
+
+.certificate-sheet-copy {
+  margin: 24px 0 0;
+  font-size: 16px;
+  white-space: nowrap;
+}
+
+.certificate-sheet-organization {
+  margin: 18px 0 0;
+  color: #103b63;
+  font-size: 20px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.certificate-sheet-collaboration {
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+
+.certificate-sheet-department {
+  margin: 5px 0 0;
+  color: #103b63;
+  font-size: 17px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.certificate-sheet-copy,
+.certificate-sheet-organization,
+.certificate-sheet-collaboration,
+.certificate-sheet-department {
+  margin-right: -92px;
+  margin-left: -92px;
+}
+
+.certificate-sheet-footer {
+  position: absolute;
+  left: 235px;
+  right: 205px;
+  bottom: 88px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.certificate-sheet-date {
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+  color: #153f5f;
+  text-align: center;
+}
+
+.certificate-sheet-date span {
+  font-size: 12px;
+}
+
+.certificate-sheet-date strong {
+  margin-top: 3px;
+  font-size: 13px;
+}
+
+.certificate-sheet-signatory {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 195px;
+  color: #34495e;
+  text-align: center;
+}
+
+.certificate-sheet-signatory img {
+  width: 128px;
+  height: 58px;
+  margin-bottom: -6px;
+  object-fit: contain;
+}
+
+.certificate-sheet-signature-placeholder {
+  width: 112px;
+  height: 47px;
+}
+
+.certificate-sheet-sign-line {
+  width: 180px;
+  border-top: 1px solid #8d8d8d;
+}
+
+.certificate-sheet-signatory span {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.certificate-sheet-signatory strong {
+  margin-top: 2px;
+  color: #153f5f;
+  font-size: 12px;
+}
+
+@media (max-width: 700px) {
+  .student-certificate-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .student-certificate-toolbar .btn {
+    align-self: flex-start;
+  }
+}
 :root {
   color-scheme: light;
   --green-dark: #1b5e20;

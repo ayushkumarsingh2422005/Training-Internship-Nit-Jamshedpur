@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { StudentAttendancePanel } from "@/components/StudentAttendancePanel";
+import { StudentCertificatePanel } from "@/components/StudentCertificatePanel";
 import { StudentCourseFeedbackPanel } from "@/components/StudentCourseFeedbackPanel";
 import { StudentResultsPanel } from "@/components/StudentResultsPanel";
 import {
@@ -301,10 +302,7 @@ export function ShortlistLookup() {
               {activeTab === "feedback" ? <StudentCourseFeedbackPanel /> : null}
 
               {activeTab === "certificate" ? (
-                <div className="profile-result-placeholder">
-                  <h4>Certificate section will be available here</h4>
-                  <p>This tab is reserved for certificate preview/download in future.</p>
-                </div>
+                <StudentCertificatePanel application={state.application} />
               ) : null}
 
               {activeTab === "results" ? <StudentResultsPanel application={state.application} /> : null}
