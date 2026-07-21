@@ -23,6 +23,8 @@ export function CertificateSheet({
   signatureUrl,
   qrCodeUrl,
 }: CertificateSheetProps) {
+  const courseName = [student.subject, student.subpart].filter(Boolean).join(" — ");
+
   return (
     <article
       className="certificate-sheet"
@@ -61,6 +63,11 @@ export function CertificateSheet({
           <p className="certificate-sheet-organization">{certificateMeta.organization}</p>
           <p className="certificate-sheet-collaboration">in collaboration with</p>
           <p className="certificate-sheet-department">{certificateMeta.collaborator}</p>
+          {courseName ? (
+            <p className="certificate-sheet-course">
+              for the course <strong>{courseName}</strong>
+            </p>
+          ) : null}
         </section>
 
         <footer className="certificate-sheet-footer">

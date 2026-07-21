@@ -189,7 +189,7 @@
   grid-template-columns: 16px minmax(0, 1fr) 16px;
   align-items: end;
   gap: 10px;
-  margin: 22px auto 0;
+  margin: 18px auto 0;
   color: #d2a139;
 }
 
@@ -213,38 +213,51 @@
 }
 
 .certificate-sheet-copy {
-  margin: 24px 0 0;
+  margin: 19px 0 0;
   font-size: 16px;
+  line-height: 1.2;
   white-space: nowrap;
 }
 
 .certificate-sheet-organization {
-  margin: 18px 0 0;
+  margin: 14px 0 0;
   color: #103b63;
   font-size: 20px;
   font-weight: 800;
+  line-height: 1.15;
   white-space: nowrap;
 }
 
 .certificate-sheet-collaboration {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   font-size: 14px;
+  line-height: 1.15;
 }
 
 .certificate-sheet-department {
-  margin: 5px 0 0;
+  margin: 4px 0 0;
   color: #103b63;
   font-size: 17px;
   font-weight: 800;
+  line-height: 1.15;
   white-space: nowrap;
 }
 
 .certificate-sheet-copy,
 .certificate-sheet-organization,
 .certificate-sheet-collaboration,
-.certificate-sheet-department {
+.certificate-sheet-department,
+.certificate-sheet-course {
   margin-right: -92px;
   margin-left: -92px;
+}
+
+.certificate-sheet-course {
+  margin-top: 7px;
+  color: #34495e;
+  font-size: 12px;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
 .certificate-sheet-footer {
