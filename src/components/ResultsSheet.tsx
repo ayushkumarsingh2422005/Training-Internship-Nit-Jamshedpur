@@ -16,7 +16,7 @@ type ResultsSheetProps = {
   nitLogoUrl: string;
   govEmblemUrl: string;
   signatureUrl: string;
-  generatedAt: string;
+  issueDate: string;
 };
 
 export function ResultsSheet({
@@ -26,7 +26,7 @@ export function ResultsSheet({
   nitLogoUrl,
   govEmblemUrl,
   signatureUrl,
-  generatedAt,
+  issueDate,
 }: ResultsSheetProps) {
   const refId = (student.internId || "RESULT")
     .toString()
@@ -193,10 +193,9 @@ export function ResultsSheet({
             <div className="results-sheet-seal">OFFICIAL RESULT</div>
             <span>NIT Jamshedpur</span>
           </div>
-          <div className="results-sheet-sign-block">
-            <div className="results-sheet-sign-image-wrap results-sheet-sign-image-wrap--empty" />
-            <div className="results-sheet-sign-line" />
-            <span>Authorized Signatory</span>
+          <div className="results-sheet-sign-block results-sheet-issue-date">
+            <span>Result issuance date:</span>
+            <strong>{issueDate}</strong>
           </div>
         </div>
 
@@ -204,7 +203,6 @@ export function ResultsSheet({
           <p>{resultsPdfMeta.formulaNote}</p>
           <p>{resultsPdfMeta.componentsNote}</p>
           <p>{resultsPdfMeta.issuerLine}</p>
-          <p className="results-sheet-generated">Issued / generated on {generatedAt}</p>
         </footer>
       </div>
     </div>

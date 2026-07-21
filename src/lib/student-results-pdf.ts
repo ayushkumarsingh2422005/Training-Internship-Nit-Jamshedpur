@@ -50,12 +50,10 @@ async function renderResultsCanvas(
   summary: ResultsPdfSummary,
 ): Promise<HTMLCanvasElement> {
   const assets = await loadIdCardAssets();
-  const generatedAt = new Date().toLocaleString("en-IN", {
+  const issueDate = new Date().toLocaleDateString("en-IN", {
     day: "2-digit",
-    month: "short",
+    month: "long",
     year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
   });
 
   root.render(
@@ -66,7 +64,7 @@ async function renderResultsCanvas(
       nitLogoUrl: assets.nitLogoUrl,
       govEmblemUrl: assets.govEmblemUrl,
       signatureUrl: assets.signatureUrl,
-      generatedAt,
+      issueDate,
     }),
   );
 
