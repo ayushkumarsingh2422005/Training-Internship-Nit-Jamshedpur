@@ -69,6 +69,10 @@ async function renderCertificate(
   });
   await waitForImages(host);
   await document.fonts.ready;
+  // Extra frame so FittedCertificateName can remeasure after fonts settle.
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
 
   const sheet = host.querySelector(".certificate-sheet") as HTMLElement | null;
   if (!sheet) throw new Error("Certificate layout is missing.");

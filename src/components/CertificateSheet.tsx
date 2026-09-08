@@ -1,8 +1,14 @@
+"use client";
+
+import { useLayoutEffect, useRef, useState } from "react";
 import {
   certificateMeta,
   certificateNumber,
   type CertificateStudent,
 } from "@/lib/certificate-meta";
+
+const NAME_MAX_FONT_PX = 48;
+const NAME_MIN_FONT_PX = 22;
 
 type CertificateSheetProps = {
   student: CertificateStudent;
@@ -13,6 +19,47 @@ type CertificateSheetProps = {
   signatureUrl: string;
   qrCodeUrl: string;
 };
+
+function fitNameToWidth(el: HTMLElement): number {
+  let nextSize = NAME_MAX_FONT_PX;
+  el.style.fontSize = `${nextSize}px`;
+
+  // Shrink until the full name fits on one line, without wrapping or clipping.
+  while (nextSize > NAME_MIN_FONT_PX && el.scrollWidth > el.clientWidth + 1) {
+    nextSize -= 1;
+    el.style.fontSize = `${nextSize}px`;
+  }
+
+  return nextSize;
+}
+
+function FittedCertificateName({ name }: { name: string }) {
+  const nameRef = useRef<HTMLElement>(null);
+  const [fontSize, setFontSize] = useState(NAME_MAX_FONT_PX);
+
+  useLayoutEffect(() => {
+    const el = nameRef.current;
+    if (!el) return;
+
+    setFontSize(fitNameToWidth(el));
+
+    let cancelled = false;
+    void document.fonts.ready.then(() => {
+      if (cancelled || !nameRef.current) return;
+      setFontSize(fitNameToWidth(nameRef.current));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [name]);
+
+  return (
+    <strong ref={nameRef} style={{ fontSize: `${fontSize}px` }}>
+      {name}
+    </strong>
+  );
+}
 
 export function CertificateSheet({
   student,
@@ -54,7 +101,7 @@ export function CertificateSheet({
           <p className="certificate-sheet-number">{certificateNumber(student)}</p>
           <div className="certificate-sheet-name-row">
             <span aria-hidden="true">●</span>
-            <strong>{student.fullName}</strong>
+            <FittedCertificateName name={student.fullName} />
             <span aria-hidden="true">●</span>
           </div>
           <p className="certificate-sheet-copy">
